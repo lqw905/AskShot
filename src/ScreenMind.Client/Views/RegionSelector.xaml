@@ -1,0 +1,37 @@
+<Window x:Class="ScreenMind.Client.Views.RegionSelector"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        Background="Transparent"
+        Cursor="Cross"
+        KeyDown="Window_KeyDown">
+    <Canvas x:Name="RootCanvas">
+        <!-- Screenshot fills the entire virtual screen in DIP units. -->
+        <Image x:Name="BackgroundImage"
+               Stretch="Fill"
+               Canvas.Left="0"
+               Canvas.Top="0"
+               Opacity="0.5" />
+        <!-- Selection outline -->
+        <Border x:Name="SelectionBorder"
+                BorderBrush="#FF0066FF"
+                BorderThickness="2"
+                Background="#220066FF"
+                Canvas.Left="0"
+                Canvas.Top="0"
+                Visibility="Collapsed" />
+        <!-- Dimensions label -->
+        <Border x:Name="SizeLabel"
+                Background="#CC000000"
+                CornerRadius="3"
+                Padding="4,2"
+                Canvas.Left="0"
+                Canvas.Top="0"
+                Visibility="Collapsed">
+            <TextBlock x:Name="SizeText" Foreground="White" FontSize="14" />
+        </Border>
+    </Canvas>
+</Window>

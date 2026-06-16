@@ -1,0 +1,33 @@
+# Build output
+bin/
+obj/
+out/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+deps/
+
+# Data
+data/
+*.log
+
+# Temporary
+.tmp/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# publish output (for distribution)
+# (keep src/, services/, docs/, AGENTS.md, CLAUDE.md)
