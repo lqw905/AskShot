@@ -1,44 +1,65 @@
-# ScreenMind — 智能截图分析工具 方案文档
+# ScreenMind — 方案文档索引
 
-## 项目定位
-
-站在成熟开源截图工具的肩上，集成本地 OCR 与视觉模型，优先打磨从截图到结果的流畅体验。
-
-## 核心设计原则
-
-- **C# 做客户端**：截图 + 热键 + 托盘 + 控制台 + Python 进程管理
-- **截图直发 VLM**：视觉模型原生理解画面，无需 OCR
-- **Python 做代理**：FastAPI :8900，纯 HTTP 转发，不加载模型
-- **零依赖**：无 Docker、无数据库、无 OCR 引擎
-- **安装即用**：NSIS 打包，内嵌 Python embeddable
+> 根目录的 [README.md](../README.md) 是项目的主说明文档，适合 GitHub 首页展示。以下文档是内部设计和技术细节。
 
 ## 文档索引
 
-| 文档 | 内容 |
-|---|---|
-| [architecture.md](./architecture.md) | 整体架构设计、模块职责、数据流、安装与启动流程 |
-| [tech-stack.md](./tech-stack.md) | 核心技术栈选型与对比分析 |
-| [mvp-roadmap.md](./mvp-roadmap.md) | MVP 分步实施路径（含控制台、进程管理、NSIS 打包） |
-| [latency-budget.md](./latency-budget.md) | 延迟预算拆解与性能优化策略 |
-| [rag-design.md](./rag-design.md) | 知识检索与记忆系统设计 |
+| 文档 | 内容 | 阅读时机 |
+|---|---|---|
+| [architecture.md](./architecture.md) | 整体架构设计、模块职责、数据流、安装与启动流程 | 理解系统设计 |
+| [tech-stack.md](./tech-stack.md) | 核心技术栈选型与对比分析 | 评估技术选型 |
+| [mvp-roadmap.md](./mvp-roadmap.md) | MVP 分步实施路径（含控制台、进程管理、NSIS 打包） | 规划开发路线 |
+| [latency-budget.md](./latency-budget.md) | 延迟预算拆解与性能优化策略 | 性能分析与优化 |
+| [rag-design.md](./rag-design.md) | 知识检索与记忆系统设计 | 理解历史检索机制 |
 
-## 快速理解
+## 项目速览
+
+- **桌面客户端**：C# / .NET 9 WPF，负责截图、热键、托盘、悬浮窗、Python 进程管理
+- **后端代理**：Python FastAPI (:8900)，纯 HTTP 转发截图到 VLM，不加载模型
+- **视觉理解**：截图直送 VLM，视觉模型原生理解画面内容，无需 OCR 中转
+- **存储方案**：历史记录写入 `data/history/*.json`，零数据库
+- **LLM 兼容性**：任何 OpenAI 兼容接口（vLLM / Ollama / DeepSeek / 云端 API）
+
+## 运行数据流
 
 ```
-用户开机 → ScreenMind.exe 托盘自启
-              │
-              ├── 自动拉起 Python 推理服务 (隐藏窗口)
-              │      └── PaddleOCR + VLM代理 → :8900
-              │      └── 历史记录 → data/history/*.json
-              │
-              ├── 用户按热键 → 框选截图 → OCR → VLM → 悬浮窗展示
-              │
-              └── 右键托盘 → 控制台 → 配置 LLM API / 快捷键 / 截图保存
+用户按 Ctrl+Shift+A
+    ↓
+RegionSelector.xaml  →  全屏半透明遮罩，鼠标框选区域
+    ↓
+ScreenCaptureService  →  GDI CreateDC("DISPLAY") 捕获虚拟屏幕，按 DPI 映射裁切
+    ↓
+InferenceClient      →  POST /analyze (base64 PNG + 配置)
+    ↓
+main.py (:8900)      →  转发到 vlm_proxy.py
+    ↓
+vlm_proxy.py         →  httpx POST 到外部 LLM API
+    ↓
+LLM 返回分析结果     →  history.py 写入 data/history/*.json
+    ↓
+ResultPopup.xaml     →  右下角悬浮窗展示结果
 ```
 
-## 目标体验
+## 配置文件
 
-- 截图到首次结果：**2~5 秒**
-- 历史相关问题检索：**< 1 秒**
-- 后台常驻内存：**~2GB**（OCR 模型），无 Docker/ChromaDB 额外开销
-- 全离线/灵活联网：本地模型或云端 API 自由切换
+程序运行时会在可执行文件同目录生成 `appsettings.json`：
+
+```json
+{
+  "llm": {
+    "endpoint": "https://api.deepseek.com/v1",
+    "api_key": "sk-xxx",
+    "model": "deepseek-chat",
+    "temperature": 0.7,
+    "max_tokens": 1024
+  },
+  "hotkey": {
+    "modifiers": 3,
+    "key": 65
+  },
+  "general": {
+    "save_screenshots": false,
+    "screenshot_dir": "data/screenshots"
+  }
+}
+```
