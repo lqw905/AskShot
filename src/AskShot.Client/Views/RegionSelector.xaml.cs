@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using ScreenMind.Client.Services;
+using AskShot.Client.Services;
 
-namespace ScreenMind.Client.Views;
+namespace AskShot.Client.Views;
 
 /// <summary>
 /// Full-screen screenshot region selector.

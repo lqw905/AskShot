@@ -1,18 +1,18 @@
-# ScreenMind · 智能截图分析工具
+# AskShot · Ask anything on your screen
 
-> 截图 → VLM → 答案，零 OCR，零 Docker，开箱即用。
+> 框选屏幕上的任何东西 → 视觉大模型直接回答你。零 OCR，零容器，开箱即用。
 
-ScreenMind 是一款轻量级的 Windows 桌面截图分析工具。你只需框选屏幕上的任意区域，它就会把截图直接发送给视觉语言模型（VLM）进行分析，并在屏幕右下角以悬浮窗形式返回结果。
+AskShot 是一款轻量级的 Windows 桌面截图问答工具。你看到屏幕上不理解的内容，只需按 `Ctrl+Shift+A` 框选区域，它就会把截图直接发送给视觉语言模型（VLM），并在屏幕右下角以悬浮窗形式返回答案。
 
 **核心设计理念：** 截图直发视觉模型，不经过 OCR 中转；本地只有一个 C# 桌面客户端 + 一个 Python HTTP 代理，无数据库、无容器、无重型依赖。
 
 ---
 
-## 💡 为什么需要 ScreenMind？
+## 💡 为什么需要 AskShot？
 
 上网、编程、看文档时，遇到不认识的按钮、不理解的界面、不确定的功能，第一反应是"这是什么"——但要得到答案，你需要：复制 → 切换窗口 → 粘贴 → 写 prompt → 等回答 → 切回来。这一套打断了多少次好奇心的出口，久而久之就懒得问了。
 
-ScreenMind 解决的就是这个：**框选 → 问**，答案直接在右下角浮现，整个过程不到 3 秒，好奇心得到满足，不需要离开当前页面。
+AskShot 解决的就是这个：**框选 → 问**，答案直接在右下角浮现，整个过程不到 3 秒，好奇心得到满足，不需要离开当前页面。
 
 > 你看到屏幕上任何不理解的东西 → 按 `Ctrl+Shift+A` 框选它 → 答案就在右下角
 
@@ -39,8 +39,8 @@ ScreenMind 解决的就是这个：**框选 → 问**，答案直接在右下角
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/lqw905/screenmind.git
-cd screenmind
+git clone https://github.com/lqw905/AskShot.git
+cd AskShot
 
 # 2. 启动 Python 后端服务
 cd services
@@ -49,7 +49,7 @@ python main.py
 # 服务监听 http://127.0.0.1:8900
 
 # 3. 编译并启动客户端（另开一个终端）
-cd ../src/ScreenMind.Client
+cd ../src/AskShot.Client
 dotnet run -c Release
 ```
 
@@ -57,11 +57,11 @@ dotnet run -c Release
 
 ```bash
 # 编译客户端
-dotnet publish src/ScreenMind.Client/ScreenMind.Client.csproj \
+dotnet publish src/AskShot.Client/AskShot.Client.csproj \
   -c Release -o bin/publish --self-contained false
 
 # 运行
-bin/publish/ScreenMind.Client.exe
+bin/publish/AskShot.Client.exe
 ```
 
 ---
@@ -106,7 +106,7 @@ bin/publish/ScreenMind.Client.exe
 
 ```
                 ┌─────────────────────────────────────────┐
-                │         ScreenMind.exe (C# WPF)        │
+                │         AskShot.exe (C# WPF)        │
                 │                                         │
                 │  ┌──────────┐  ┌──────────┐  ┌───────┐ │
                 │  │ 热键服务  │  │ 截图捕获  │  │ 托盘  │ │
@@ -162,7 +162,7 @@ bin/publish/ScreenMind.Client.exe
 ## 📁 项目结构
 
 ```
-screenmind/
+AskShot/
 ├── AGENTS.md                         # AI 助手指令（Codex 用）
 ├── CLAUDE.md                         # Claude 配置
 ├── docs/
@@ -178,7 +178,7 @@ screenmind/
 │   ├── history.py                    # JSON 文件历史记录
 │   ├── models.py                     # Pydantic 请求/响应模型
 │   └── requirements.txt              # fastapi + uvicorn + httpx
-└── src/ScreenMind.Client/            # C# WPF 桌面客户端
+└── src/AskShot.Client/            # C# WPF 桌面客户端
     ├── Models/AppConfig.cs           # 配置模型（LLM/Hotkey/General）
     ├── Services/
     │   ├── HotkeyService.cs          # 全局热键（RegisterHotKey）
@@ -191,7 +191,7 @@ screenmind/
         ├── ResultPopup.xaml(.cs)     # 右下角悬浮结果窗
         └── MainWindow.xaml(.cs)      # 控制台（LLM 配置 + 测试）
     ├── App.xaml(.cs)                 # 应用入口 + 全局异常处理
-    └── ScreenMind.Client.csproj      # .NET 9 WPF 项目文件
+    └── AskShot.Client.csproj      # .NET 9 WPF 项目文件
 ```
 
 ---
@@ -208,10 +208,10 @@ screenmind/
 
 ```bash
 # 编译 C# 客户端
-dotnet build src/ScreenMind.Client/ScreenMind.Client.csproj -c Release
+dotnet build src/AskShot.Client/AskShot.Client.csproj -c Release
 
 # 发布
-dotnet publish src/ScreenMind.Client/ScreenMind.Client.csproj \
+dotnet publish src/AskShot.Client/AskShot.Client.csproj \
   -c Release -o bin/publish
 
 # 启动 Python 服务（开发模式）

@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 
-namespace ScreenMind.Client.Views;
+namespace AskShot.Client.Views;
 
 public partial class ResultPopup : Window
 {

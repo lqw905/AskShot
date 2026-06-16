@@ -1,9 +1,9 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using ScreenMind.Client.Models;
+using AskShot.Client.Models;
 
-namespace ScreenMind.Client.Services;
+namespace AskShot.Client.Services;
 
 /// <summary>
 /// HTTP client for calling the Python inference service on localhost:8900.

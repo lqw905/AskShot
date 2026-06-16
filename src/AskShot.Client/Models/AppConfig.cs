@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace ScreenMind.Client.Models;
+namespace AskShot.Client.Models;
 
 /// <summary>
 /// Application configuration, persisted to appsettings.json.

@@ -1,4 +1,4 @@
-"""Pydantic models for ScreenMind inference service."""
+"""Pydantic models for AskShot inference service."""
 
 from pydantic import BaseModel
 

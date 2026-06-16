@@ -4,7 +4,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                     ScreenMind.exe (C# 桌面客户端)                 │
+│                     AskShot.exe (C# 桌面客户端)                 │
 │                                                                  │
 │  ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌───────┐ │
 │  │ 截图捕获  │ │ 全局热键  │ │ 悬浮窗 UI │ │ 控制台    │ │托盘图标│ │
@@ -116,9 +116,9 @@
 ## 部署结构
 
 ```
-C:\Program Files\ScreenMind\
-├── ScreenMind.exe              # C# 客户端主程序
-├── ScreenMind.exe.config       # .NET 配置
+C:\Program Files\AskShot\
+├── AskShot.exe              # C# 客户端主程序
+├── AskShot.exe.config       # .NET 配置
 ├── python\                     # 内嵌 Python 3.11 (embeddable, ~30MB)
 │   ├── python.exe
 │   └── Lib\                    # site-packages
@@ -141,7 +141,7 @@ C:\Program Files\ScreenMind\
 ### 安装
 
 ```
-ScreenMind-Setup.exe (NSIS 打包, ~500MB 不含VLM模型 / ~5GB 含推荐模型)
+AskShot-Setup.exe (NSIS 打包, ~500MB 不含VLM模型 / ~5GB 含推荐模型)
   │
   ├── 安装路径选择
   ├── 解压文件
@@ -156,7 +156,7 @@ ScreenMind-Setup.exe (NSIS 打包, ~500MB 不含VLM模型 / ~5GB 含推荐模型
 系统开机
   │
   ▼
-ScreenMind.exe 自启动 → 系统托盘
+AskShot.exe 自启动 → 系统托盘
   │
   ├── 检查 localhost:8900 是否存活
   │     ├── 存活 → 跳过

@@ -1,4 +1,4 @@
-# ScreenMind — 方案文档索引
+# AskShot — 方案文档索引
 
 > 根目录的 [README.md](../README.md) 是项目的主说明文档，适合 GitHub 首页展示。以下文档是内部设计和技术细节。
 

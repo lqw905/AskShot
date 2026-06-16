@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace ScreenMind.Client.Services;
+namespace AskShot.Client.Services;
 
 /// <summary>
 /// Global hotkey registration using RegisterHotKey Win32 API.

@@ -137,7 +137,7 @@ async def load_models():
 
 ```csharp
 // 在 C# 客户端埋点
-using var activity = DiagnosticListener.StartActivity("screenmind.analyze");
+using var activity = DiagnosticListener.StartActivity("AskShot.analyze");
 
 // 记录各阶段耗时
 logger.LogInformation("Capture: {Elapsed}ms", captureElapsed);

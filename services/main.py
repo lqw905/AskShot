@@ -1,4 +1,4 @@
-"""ScreenMind inference service — single FastAPI process (:8900)
+"""AskShot inference service — single FastAPI process (:8900)
 
 VLM proxy (screenshot → LLM directly, no OCR) + file-based history.
 No database, no Docker, no OCR engine. Just Python.
@@ -26,17 +26,17 @@ history_store: HistoryStore | None = None
 async def lifespan(app: FastAPI):
     global vlm_proxy, history_store
 
-    print("[ScreenMind] Starting...")
+    print("[AskShot] Starting...")
     vlm_proxy = VlmProxy()
     history_store = HistoryStore(data_dir=Path("data"))
-    print("[ScreenMind] Ready on :8900")
+    print("[AskShot] Ready on :8900")
 
     yield
 
-    print("[ScreenMind] Shutting down...")
+    print("[AskShot] Shutting down...")
 
 
-app = FastAPI(title="ScreenMind", lifespan=lifespan)
+app = FastAPI(title="AskShot", lifespan=lifespan)
 
 
 @app.get("/health", response_model=HealthResponse)

@@ -1,4 +1,4 @@
-<Window x:Class="ScreenMind.Client.Views.RegionSelector"
+<Window x:Class="AskShot.Client.Views.RegionSelector"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"

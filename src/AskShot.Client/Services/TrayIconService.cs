@@ -6,7 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-namespace ScreenMind.Client.Services;
+namespace AskShot.Client.Services;
 
 /// <summary>
 /// System tray icon using Shell_NotifyIcon + a plain WPF Popup window for the menu.
@@ -31,7 +31,7 @@ public class TrayIconService : IDisposable
         _owner = owner;
     }
 
-    public void Show(string tooltip = "ScreenMind")
+    public void Show(string tooltip = "AskShot")
     {
         if (_visible) return;
 
@@ -295,7 +295,7 @@ public class TrayIconService : IDisposable
         try
         {
             System.IO.File.AppendAllText(
-                System.IO.Path.Combine(AppContext.BaseDirectory, "screenmind_crash.log"),
+                System.IO.Path.Combine(AppContext.BaseDirectory, "AskShot_crash.log"),
                 $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
         }
         catch { }

@@ -3,11 +3,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media.Imaging;
-using ScreenMind.Client.Models;
-using ScreenMind.Client.Services;
-using ScreenMind.Client.Views;
+using AskShot.Client.Models;
+using AskShot.Client.Services;
+using AskShot.Client.Views;
 
-namespace ScreenMind.Client;
+namespace AskShot.Client;
 
 public partial class App : Application
 {
@@ -35,7 +35,7 @@ public partial class App : Application
         {
             WriteLog($"[Dispatcher] {args.Exception}");
             args.Handled = true;
-            MessageBox.Show($"发生了错误:\n{args.Exception}", "ScreenMind 错误");
+            MessageBox.Show($"发生了错误:\n{args.Exception}", "AskShot 错误");
         };
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
@@ -80,16 +80,16 @@ public partial class App : Application
             try { new MainWindow(_inferenceClient).Show(); }
             catch (Exception ex) { WriteLog($"[OpenConsole] {ex}"); }
         };
-        _trayIcon.OpenSearch += () => System.Windows.MessageBox.Show("历史搜索功能即将推出。", "ScreenMind");
+        _trayIcon.OpenSearch += () => System.Windows.MessageBox.Show("历史搜索功能即将推出。", "AskShot");
         _trayIcon.Exit += ExitApplication;
-        _trayIcon.Show("ScreenMind");
+        _trayIcon.Show("AskShot");
     }
 
     private static void WriteLog(string msg)
     {
         try
         {
-            var logPath = Path.Combine(AppContext.BaseDirectory, "screenmind_crash.log");
+            var logPath = Path.Combine(AppContext.BaseDirectory, "AskShot_crash.log");
             File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
             Trace.WriteLine(msg);
         }
@@ -148,7 +148,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"截图失败:\n{ex}", "ScreenMind 错误");
+            MessageBox.Show($"截图失败:\n{ex}", "AskShot 错误");
         }
     }
 

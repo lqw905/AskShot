@@ -5,7 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace ScreenMind.Client.Services;
+namespace AskShot.Client.Services;
 
 /// <summary>
 /// Screen capture using Win32 GDI. Captures the full virtual screen (all

@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using ScreenMind.Client.Models;
-using ScreenMind.Client.Services;
+using AskShot.Client.Models;
+using AskShot.Client.Services;
 
-namespace ScreenMind.Client;
+namespace AskShot.Client;
 
 public partial class MainWindow : Window
 {

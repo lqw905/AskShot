@@ -1,7 +1,7 @@
-<Window x:Class="ScreenMind.Client.MainWindow"
+<Window x:Class="AskShot.Client.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ScreenMind 控制台" Height="450" Width="550"
+        Title="AskShot 控制台" Height="450" Width="550"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResizeWithGrip">
     <TabControl Margin="10">

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace ScreenMind.Client.Services;
+namespace AskShot.Client.Services;
 
 /// <summary>
 /// P/Invoke declarations for GDI32 and USER32.

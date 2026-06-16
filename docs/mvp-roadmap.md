@@ -88,7 +88,7 @@ var trayIcon = new
 {
     Icon = Resources.AppIcon,
     Visible = true,
-    Text = "ScreenMind",
+    Text = "AskShot",
     ContextMenuStrip = new ContextMenuStrip
     {
         Items =
@@ -144,7 +144,7 @@ async def lifespan(app: FastAPI):
     vlm = VlmProxy()  # 运行时从请求中读取 API 配置
     yield
 
-app = FastAPI(title="ScreenMind", lifespan=lifespan)
+app = FastAPI(title="AskShot", lifespan=lifespan)
 
 @app.get("/health")
 async def health():
@@ -363,7 +363,7 @@ public class DataConfig
 ┌─ 数据 ────────────────────────────────────────────┐
 │                                                    │
 │  ☐ 保存截图原图                                    │
-│    截图保存路径: [C:\Users\xxx\Pictures\ScreenMind 📁]│
+│    截图保存路径: [C:\Users\xxx\Pictures\AskShot 📁]│
 │                                                    │
 │  历史记录保留: [30 天                        ───○]│
 │  当前占用: 12 MB (142 条记录 + 0 张截图)          │
@@ -465,9 +465,9 @@ public async Task<AnalysisResult> ProcessScreenshot(Bitmap screenshot)
 ### 5.1 NSIS 安装包
 
 ```nsis
-; ScreenMind-Setup.nsi
+; AskShot-Setup.nsi
 ; 打包内容：
-;   - ScreenMind.exe (C# publish 单文件)
+;   - AskShot.exe (C# publish 单文件)
 ;   - python/ (embeddable Python + site-packages)
 ;   - services/ (Python 代码)
 ;   - models/ (OCR + Embedding 模型)
@@ -477,8 +477,8 @@ public async Task<AnalysisResult> ProcessScreenshot(Bitmap screenshot)
 
 ```bash
 # 构建命令
-dotnet publish src/ScreenMind.Client -c Release -r win-x64 --self-contained
-makensis installer/ScreenMind-Setup.nsi
+dotnet publish src/AskShot.Client -c Release -r win-x64 --self-contained
+makensis installer/AskShot-Setup.nsi
 ```
 
 ### 5.2 端到端优化

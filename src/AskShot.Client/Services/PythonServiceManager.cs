@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 
-namespace ScreenMind.Client.Services;
+namespace AskShot.Client.Services;
 
 /// <summary>
 /// Manages the Python inference service as a child process.
@@ -27,7 +27,7 @@ public class PythonServiceManager : IDisposable
     {
         if (await IsHealthy())
         {
-            Console.WriteLine("[ScreenMind] Python service already running.");
+            Console.WriteLine("[AskShot] Python service already running.");
             return;
         }
 
@@ -60,11 +60,11 @@ public class PythonServiceManager : IDisposable
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
 
-        Console.WriteLine($"[ScreenMind] Started Python service (PID: {_process.Id})");
+        Console.WriteLine($"[AskShot] Started Python service (PID: {_process.Id})");
 
         // Wait for health check
         await WaitForReady(TimeSpan.FromSeconds(30), ct);
-        Console.WriteLine("[ScreenMind] Python service is healthy.");
+        Console.WriteLine("[AskShot] Python service is healthy.");
     }
 
     private async Task<bool> IsHealthy()
@@ -98,19 +98,19 @@ public class PythonServiceManager : IDisposable
         if (_disposed) return;
 
         _restartCount++;
-        Console.WriteLine($"[ScreenMind] Python process exited (attempt {_restartCount}/{MaxRestartAttempts})");
+        Console.WriteLine($"[AskShot] Python process exited (attempt {_restartCount}/{MaxRestartAttempts})");
 
         if (_restartCount <= MaxRestartAttempts)
         {
             // Exponential backoff: 2s, 4s, 8s
             var delay = TimeSpan.FromSeconds(Math.Pow(2, _restartCount));
-            Console.WriteLine($"[ScreenMind] Restarting in {delay.TotalSeconds}s...");
+            Console.WriteLine($"[AskShot] Restarting in {delay.TotalSeconds}s...");
             await Task.Delay(delay);
             await StartAsync();
         }
         else
         {
-            Console.WriteLine("[ScreenMind] Max restart attempts reached. Service stopped.");
+            Console.WriteLine("[AskShot] Max restart attempts reached. Service stopped.");
         }
     }
 
@@ -122,7 +122,7 @@ public class PythonServiceManager : IDisposable
             _process.Exited -= OnProcessExited;
             _process.Kill();
             _process.Dispose();
-            Console.WriteLine("[ScreenMind] Python service stopped.");
+            Console.WriteLine("[AskShot] Python service stopped.");
         }
     }
 
