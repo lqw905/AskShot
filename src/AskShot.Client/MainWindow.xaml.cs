@@ -11,16 +11,21 @@ public partial class MainWindow : Window
     private readonly InferenceClient _client;
     private readonly AppConfig _config;
 
+    public event Action? ConfigSaved;
+    public event Func<Task>? RestartRequested;
+
     public MainWindow(InferenceClient client)
     {
         InitializeComponent();
         _client = client;
         _config = AppConfig.Load();
         LoadConfigToUi();
+        Loaded += async (_, _) => await RefreshServiceStatusAsync();
     }
 
     private void LoadConfigToUi()
     {
+        TxtHotkey.Text = _config.Hotkeys.CaptureAndAnalyze;
         TxtEndpoint.Text = _config.Llm.Endpoint;
         TxtApiKey.Text = _config.Llm.ApiKey;
         TxtModel.Text = _config.Llm.Model;
@@ -30,7 +35,7 @@ public partial class MainWindow : Window
 
         ChkSaveScreenshots.IsChecked = _config.Data.SaveScreenshots;
         TxtScreenshotPath.Text = string.IsNullOrEmpty(_config.Data.ScreenshotPath)
-            ? Path.Combine(AppContext.BaseDirectory, "data", "screenshots")
+            ? Path.Combine(AppConfig.DataDir, "screenshots")
             : _config.Data.ScreenshotPath;
         TxtScreenshotPath.IsEnabled = _config.Data.SaveScreenshots;
         TxtRetentionDays.Text = _config.Data.HistoryRetentionDays.ToString();
@@ -47,8 +52,12 @@ public partial class MainWindow : Window
         _config.Data.SaveScreenshots = ChkSaveScreenshots.IsChecked == true;
         _config.Data.ScreenshotPath = TxtScreenshotPath.Text;
         _config.Data.HistoryRetentionDays = int.TryParse(TxtRetentionDays.Text, out var rd) ? rd : 30;
+        _config.Hotkeys.CaptureAndAnalyze = string.IsNullOrWhiteSpace(TxtHotkey.Text)
+            ? "Ctrl+Shift+A"
+            : TxtHotkey.Text.Trim();
 
         _config.Save();
+        ConfigSaved?.Invoke();
     }
 
     private async void TestConnection_Click(object sender, RoutedEventArgs e)
@@ -94,6 +103,12 @@ public partial class MainWindow : Window
 
     private void SaveConfig(object sender, RoutedEventArgs e) => SaveConfigFromUi();
 
+    private void SaveConfig_Click(object sender, RoutedEventArgs e)
+    {
+        SaveConfigFromUi();
+        MessageBox.Show("设置已保存。", "AskShot");
+    }
+
     private void BrowseScreenshotPath_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
@@ -114,7 +129,7 @@ public partial class MainWindow : Window
             MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result == MessageBoxResult.Yes)
         {
-            var historyDir = Path.Combine(AppContext.BaseDirectory, "data", "history");
+            var historyDir = Path.Combine(AppConfig.DataDir, "history");
             if (Directory.Exists(historyDir))
             {
                 foreach (var f in Directory.GetFiles(historyDir, "*.json"))
@@ -126,12 +141,25 @@ public partial class MainWindow : Window
 
     private void OpenDataDir_Click(object sender, RoutedEventArgs e)
     {
-        var dataDir = Path.Combine(AppContext.BaseDirectory, "data");
+        var dataDir = AppConfig.DataDir;
         Directory.CreateDirectory(dataDir);
-        Process.Start("explorer.exe", dataDir);
+        Process.Start(new ProcessStartInfo("explorer.exe", dataDir) { UseShellExecute = true });
     }
 
     private async void RestartService_Click(object sender, RoutedEventArgs e)
+    {
+        LblServiceStatus.Text = "Python 服务: 重启中...";
+        if (RestartRequested != null)
+            await RestartRequested.Invoke();
+        await RefreshServiceStatusAsync();
+    }
+
+    private async void RefreshService_Click(object sender, RoutedEventArgs e)
+    {
+        await RefreshServiceStatusAsync();
+    }
+
+    private async Task RefreshServiceStatusAsync()
     {
         LblServiceStatus.Text = "Python 服务: 检测中...";
         var healthy = await _client.IsHealthy();

@@ -53,7 +53,7 @@ class HistoryStore:
 
     def get_recent(self, limit: int = 10, hours: int = 24) -> list[dict]:
         """Get the most recent records within the time window."""
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         results = []
 
         files = sorted(

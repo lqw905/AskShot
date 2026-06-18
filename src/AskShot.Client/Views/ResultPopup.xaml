@@ -3,48 +3,54 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"
         AllowsTransparency="True"
-        Topmost="True"
+        Topmost="False"
         ShowInTaskbar="False"
         Background="Transparent"
-        Width="400" Height="300"
+        Width="430" Height="320"
         ResizeMode="NoResize"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
         KeyDown="Window_KeyDown">
-    <Border Background="#F0222222" CornerRadius="10" BorderBrush="#444" BorderThickness="1">
-        <Grid Margin="12">
+    <Border Background="#FAFAFA" CornerRadius="8" BorderBrush="#D6D6D6" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.22"/>
+        </Border.Effect>
+        <Grid Margin="14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Title bar -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="📌" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"
-                        Width="30" Height="30" Click="Pin_Click" ToolTip="固定窗口"/>
-                <Button Content="✕" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"
-                        Width="30" Height="30" Click="Close_Click" ToolTip="关闭"/>
-            </StackPanel>
+            <Grid>
+                <TextBlock Text="解释" Foreground="#222222" FontSize="14"
+                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="复制" Width="54" Height="28" Click="Copy_Click"
+                            ToolTip="复制结果"/>
+                    <Button x:Name="PinButton" Content="固定" Width="54" Height="28"
+                            Margin="8,0,0,0" Click="Pin_Click" ToolTip="固定窗口"/>
+                    <Button Content="关闭" Width="54" Height="28" Margin="8,0,0,0"
+                            Click="Close_Click" ToolTip="关闭"/>
+                </StackPanel>
+            </Grid>
 
-            <!-- Result text (scrollable) -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,5">
-                <TextBlock x:Name="ResultText" Foreground="#EEEEEE" FontSize="14"
-                           TextWrapping="Wrap" Text="分析中..."/>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,12,0,8">
+                <TextBlock x:Name="ResultText" Foreground="#202124" FontSize="14"
+                           LineHeight="22" TextWrapping="Wrap" Text="分析中..."/>
             </ScrollViewer>
 
-            <!-- Ask follow-up -->
-            <Border Grid.Row="2" Background="#333" CornerRadius="6" Margin="0,8,0,0">
+            <Border Grid.Row="2" Background="#F1F3F4" CornerRadius="6">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="QuestionBox" Foreground="White"
+                    <TextBox x:Name="QuestionBox" Foreground="#202124"
                              Background="Transparent" BorderThickness="0"
-                             Padding="6,4" VerticalAlignment="Center"
+                             Padding="8,6" VerticalAlignment="Center"
                              KeyDown="QuestionBox_KeyDown"
-                             Text=""/>
-                    <Button Grid.Column="1" Content="→" Width="36" Height="28"
+                             Text="" ToolTip="继续追问"/>
+                    <Button Grid.Column="1" Content="Ask" Width="48" Height="30"
                             Click="AskFollowUp_Click" ToolTip="追问"/>
                 </Grid>
             </Border>

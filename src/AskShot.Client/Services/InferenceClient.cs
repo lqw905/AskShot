@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AskShot.Client.Models;
 
 namespace AskShot.Client.Services;
@@ -85,7 +86,8 @@ public class InferenceClient : IDisposable
         resp.EnsureSuccessStatusCode();
         var result = await resp.Content.ReadFromJsonAsync<JsonElement>();
         return JsonSerializer.Deserialize<List<HistoryEntry>>(
-            result.GetProperty("results").GetRawText());
+            result.GetProperty("results").GetRawText(),
+            JsonOptions);
     }
 
     public async Task<List<HistoryEntry>?> SearchHistoryAsync(string query, int limit = 10)
@@ -94,7 +96,17 @@ public class InferenceClient : IDisposable
         resp.EnsureSuccessStatusCode();
         var result = await resp.Content.ReadFromJsonAsync<JsonElement>();
         return JsonSerializer.Deserialize<List<HistoryEntry>>(
-            result.GetProperty("results").GetRawText());
+            result.GetProperty("results").GetRawText(),
+            JsonOptions);
+    }
+
+    public async Task<bool> ToggleFavoriteAsync(string recordId)
+    {
+        var escaped = Uri.EscapeDataString(recordId);
+        var resp = await _http.PostAsync($"/history/favorite/{escaped}", null);
+        resp.EnsureSuccessStatusCode();
+        var result = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        return result.GetProperty("is_favorite").GetBoolean();
     }
 
     public void Dispose() => _http.Dispose();
@@ -106,6 +118,11 @@ public class InferenceClient : IDisposable
         model = config.Model.Trim(),
         temperature = config.Temperature,
         max_tokens = config.MaxTokens,
+    };
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
     };
 
     private static async Task EnsureSuccessWithBody(HttpResponseMessage resp)
@@ -136,12 +153,20 @@ public class ApiConnectionTestResult
 
 public class HistoryEntry
 {
+    [JsonPropertyName("id")]
     public string Id { get; set; } = "";
+    [JsonPropertyName("timestamp")]
     public string Timestamp { get; set; } = "";
+    [JsonPropertyName("ocr_text")]
     public string OcrText { get; set; } = "";
+    [JsonPropertyName("analysis")]
     public string Analysis { get; set; } = "";
+    [JsonPropertyName("user_question")]
     public string UserQuestion { get; set; } = "";
+    [JsonPropertyName("screenshot_path")]
     public string? ScreenshotPath { get; set; }
+    [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = [];
+    [JsonPropertyName("is_favorite")]
     public bool IsFavorite { get; set; }
 }

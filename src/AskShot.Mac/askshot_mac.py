@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -75,6 +76,10 @@ CONFIG_PATH = APP_SUPPORT_DIR / "appsettings.mac.json"
 LOG_DIR = APP_SUPPORT_DIR / "logs"
 BASE_URL = "http://127.0.0.1:8900"
 IS_MACOS = platform.system() == "Darwin"
+
+
+class CaptureCancelled(Exception):
+    pass
 
 
 @dataclass
@@ -450,9 +455,7 @@ class DesktopCapture:
                 check=False,
             )
             if result.returncode != 0 or not path.exists() or path.stat().st_size == 0:
-                raise RuntimeError(
-                    "截图未生成。如果你没有按 Esc 取消，请检查 macOS Screen Recording 权限。"
-                )
+                raise CaptureCancelled()
 
             image = QImage(str(path))
             if image.isNull() or image.width() < 2 or image.height() < 2:
@@ -470,6 +473,23 @@ def image_to_base64(image: QImage) -> str:
     buffer.open(QIODevice.OpenModeFlag.WriteOnly)
     image.save(buffer, "PNG")
     return base64.b64encode(bytes(data)).decode("ascii")
+
+
+def clean_display_text(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = text.replace("\r\n", "\n").replace("\r", "\n")
+    cleaned = re.sub(r"```[a-zA-Z0-9_-]*\n?", "", cleaned)
+    cleaned = cleaned.replace("```", "")
+    cleaned = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", cleaned)
+    cleaned = re.sub(r"\*\*([^*\n]+)\*\*", r"\1", cleaned)
+    cleaned = re.sub(r"__([^_\n]+)__", r"\1", cleaned)
+    cleaned = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", cleaned)
+    cleaned = re.sub(r"(?m)^\s*[*+-]\s+", "• ", cleaned)
+    cleaned = re.sub(r"(?m)^\s*[-*_]{3,}\s*$", "", cleaned)
+    cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
 
 
 class SelectionOverlay(QWidget):
@@ -542,16 +562,56 @@ class ResultPopup(QWidget):
         super().__init__()
         self.pinned = False
         self.setWindowTitle("AskShot")
-        self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint)
-        self.resize(420, 320)
+        self.setWindowFlags(Qt.WindowType.Tool)
+        self.resize(430, 320)
+        self.pin_timer = QTimer(self)
+        self.pin_timer.setInterval(1000)
+        self.pin_timer.timeout.connect(self._keep_pinned_on_top)
+        self.setStyleSheet(
+            """
+            QWidget {
+                background: #fafafa;
+                color: #202124;
+                font-size: 14px;
+            }
+            QTextBrowser {
+                border: none;
+                background: #fafafa;
+                line-height: 1.45;
+            }
+            QLineEdit {
+                border: none;
+                border-radius: 6px;
+                padding: 7px 8px;
+                background: #f1f3f4;
+            }
+            QPushButton {
+                border: 1px solid #dadce0;
+                border-radius: 6px;
+                padding: 5px 10px;
+                background: #ffffff;
+            }
+            QPushButton:hover {
+                background: #f1f3f4;
+            }
+            """
+        )
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
         header = QHBoxLayout()
+        title = QLabel("解释")
+        title.setStyleSheet("font-weight: 600;")
+        header.addWidget(title)
         header.addStretch()
-        self.pin_btn = QPushButton("Pin")
+        copy_btn = QPushButton("复制")
+        copy_btn.clicked.connect(self._copy)
+        self.pin_btn = QPushButton("固定")
         self.pin_btn.clicked.connect(self._toggle_pin)
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton("关闭")
         close_btn.clicked.connect(self.close)
+        header.addWidget(copy_btn)
         header.addWidget(self.pin_btn)
         header.addWidget(close_btn)
 
@@ -571,7 +631,7 @@ class ResultPopup(QWidget):
         layout.addLayout(input_row)
 
     def show_text(self, text: str) -> None:
-        self.text.setPlainText(text)
+        self.text.setPlainText(clean_display_text(text))
         self._move_to_bottom_right()
         self.show()
         self.raise_()
@@ -579,7 +639,7 @@ class ResultPopup(QWidget):
 
     def append_text(self, text: str) -> None:
         self.text.append("")
-        self.text.append(text)
+        self.text.append(clean_display_text(text))
 
     def _ask(self) -> None:
         question = self.question.text().strip()
@@ -593,7 +653,26 @@ class ResultPopup(QWidget):
 
     def _toggle_pin(self) -> None:
         self.pinned = not self.pinned
-        self.pin_btn.setText("Pinned" if self.pinned else "Pin")
+        flags = Qt.WindowType.Tool
+        if self.pinned:
+            flags |= Qt.WindowType.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        self.pin_btn.setText("已固定" if self.pinned else "固定")
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        if self.pinned:
+            self.pin_timer.start()
+        else:
+            self.pin_timer.stop()
+
+    def _copy(self) -> None:
+        QApplication.clipboard().setText(self.text.toPlainText())
+
+    def _keep_pinned_on_top(self) -> None:
+        if not self.pinned or not self.isVisible():
+            return
+        self.raise_()
 
     def keyPressEvent(self, event: Any) -> None:
         if event.key() == Qt.Key.Key_Escape and not self.pinned:
@@ -859,6 +938,7 @@ class Controller(QObject):
         self.service = PythonServiceManager(self.api)
         self.capture = DesktopCapture()
         self.popup: ResultPopup | None = None
+        self.pinned_popups: list[ResultPopup] = []
         self.config_window: ConfigWindow | None = None
         self.history_window: HistoryWindow | None = None
         self.overlay: SelectionOverlay | None = None
@@ -971,6 +1051,8 @@ class Controller(QObject):
             self.overlay.raise_()
             self.overlay.activateWindow()
         except Exception as exc:
+            if isinstance(exc, CaptureCancelled):
+                return
             message = str(exc)
             if "Screen Recording" in message or "屏幕录制" in message:
                 box = QMessageBox()
@@ -999,10 +1081,23 @@ class Controller(QObject):
         self.last_image_base64 = image_base64
         self.last_image = image
         self.last_hash = hashlib.md5(image_base64[:100].encode("utf-8")).hexdigest()[:8]
+        if self.popup is not None:
+            if self.popup.pinned:
+                pinned_popup = self.popup
+                self.pinned_popups.append(pinned_popup)
+                pinned_popup.destroyed.connect(
+                    lambda _=None, popup=pinned_popup: self._forget_pinned_popup(popup)
+                )
+            else:
+                self.popup.close()
         self.popup = ResultPopup()
         self.popup.follow_up.connect(self.ask_follow_up)
         self.popup.show_text(f"Analyzing {width} x {height}...")
         self._analyze_async(image_base64, None, True)
+
+    def _forget_pinned_popup(self, popup: ResultPopup) -> None:
+        if popup in self.pinned_popups:
+            self.pinned_popups.remove(popup)
 
     def ask_follow_up(self, question: str) -> None:
         if not self.last_image_base64:

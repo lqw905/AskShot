@@ -44,15 +44,18 @@ AskShot 解决的就是这个：**框选 → 问**，答案直接在右下角浮
 git clone https://github.com/lqw905/AskShot.git
 cd AskShot
 
-# 2. 启动 Python 后端服务
-cd services
-pip install -r requirements.txt
-python main.py
-# 服务监听 http://127.0.0.1:8900
+# 2. 一键创建环境、安装后端依赖并启动 WPF 客户端
+powershell -ExecutionPolicy Bypass -File scripts/run-windows.ps1
+```
 
-# 3. 编译并启动客户端（另开一个终端）
-cd ../src/AskShot.Client
-dotnet run -c Release
+Windows 端会由 WPF 客户端自动管理 Python 后端服务，运行时配置和数据保存在：
+
+```text
+%APPDATA%\AskShot\
+├── appsettings.json
+├── data\history\
+├── data\screenshots\
+└── logs\
 ```
 
 #### macOS
@@ -209,7 +212,8 @@ AskShot/
 │   ├── models.py                     # Pydantic 请求/响应模型
 │   └── requirements.txt              # fastapi + uvicorn + httpx
 ├── scripts/
-│   └── run-macos.sh                  # macOS 开发启动脚本
+│   ├── run-macos.sh                  # macOS 开发启动脚本
+│   └── run-windows.ps1               # Windows 开发启动脚本
 └── src/AskShot.Client/            # C# WPF 桌面客户端
     ├── Models/AppConfig.cs           # 配置模型（LLM/Hotkey/General）
     ├── Services/
@@ -290,6 +294,7 @@ cd services && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8900
 | 程序启动即崩溃 | 字体缓存损坏或配置文件损坏 | 删除 `bin/publish/appsettings.json` 后重启 |
 | Python 服务无法启动 | `python` 不在 PATH，或端口被占用 | 确认 `python --version` 可用，端口 8900 无冲突 |
 | 控制台报 HTTP 500 | Python 服务有异常 | 查看 `bin/publish/` 下的日志文件 |
+| Windows 历史/配置找不到 | 数据迁移到了用户目录 | 查看 `%APPDATA%\AskShot\` |
 | macOS 快捷键无响应 | 未授予辅助功能权限 | 控制台 General 页打开 Accessibility，允许运行 AskShot 的终端或打包 App |
 | macOS 截图为空或黑屏 | 未授予屏幕录制权限 | 控制台 General 页打开 Screen Recording，允许运行 AskShot 的终端或打包 App 后重启 |
 | macOS 后端启动失败 | 服务日志有异常 | 查看 `~/Library/Application Support/AskShot/logs/` |

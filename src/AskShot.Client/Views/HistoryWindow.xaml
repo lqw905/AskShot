@@ -1,0 +1,48 @@
+<Window x:Class="AskShot.Client.Views.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AskShot 历史记录" Height="560" Width="820"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="SearchBox" Height="30" VerticalContentAlignment="Center"
+                     KeyDown="SearchBox_KeyDown"/>
+            <Button Grid.Column="1" Content="搜索" Width="80" Margin="8,0,0,0"
+                    Click="Search_Click"/>
+            <Button Grid.Column="2" Content="最近" Width="80" Margin="8,0,0,0"
+                    Click="Recent_Click"/>
+            <Button Grid.Column="3" Content="收藏/取消" Width="100" Margin="8,0,0,0"
+                    Click="ToggleFavorite_Click"/>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ListBox x:Name="HistoryList" SelectionChanged="HistoryList_SelectionChanged"/>
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch"/>
+            <TextBox x:Name="DetailsBox" Grid.Column="2" IsReadOnly="True"
+                     TextWrapping="Wrap" AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"/>
+        </Grid>
+
+        <TextBlock x:Name="StatusText" Grid.Row="2" Margin="0,10,0,0"
+                   Foreground="Gray" Text=""/>
+    </Grid>
+</Window>

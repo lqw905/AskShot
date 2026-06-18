@@ -12,19 +12,33 @@ public class AppConfig
     public HotkeyConfig Hotkeys { get; set; } = new();
     public DataConfig Data { get; set; } = new();
 
-    private static readonly string ConfigPath = Path.Combine(
-        AppContext.BaseDirectory, "appsettings.json");
+    public static string AppDataDir { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "AskShot");
+
+    public static string DataDir { get; } = Path.Combine(AppDataDir, "data");
+    public static string LogsDir { get; } = Path.Combine(AppDataDir, "logs");
+
+    private static readonly string ConfigPath = Path.Combine(AppDataDir, "appsettings.json");
+    private static readonly string LegacyConfigPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
     public static AppConfig Load()
     {
-        if (File.Exists(ConfigPath))
+        Directory.CreateDirectory(AppDataDir);
+        Directory.CreateDirectory(DataDir);
+        Directory.CreateDirectory(LogsDir);
+
+        var path = File.Exists(ConfigPath) ? ConfigPath : LegacyConfigPath;
+        if (File.Exists(path))
         {
-            var json = File.ReadAllText(ConfigPath);
+            var json = File.ReadAllText(path);
             var config = JsonSerializer.Deserialize<AppConfig>(
                 json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new AppConfig();
 
             ApplyLegacyLlmFields(config, json);
+            if (path == LegacyConfigPath)
+                config.Save();
             return config;
         }
         return new AppConfig();
@@ -32,6 +46,7 @@ public class AppConfig
 
     public void Save()
     {
+        Directory.CreateDirectory(AppDataDir);
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(ConfigPath, json);
     }
@@ -84,7 +99,7 @@ public class LlmConfig
 {
     public string Endpoint { get; set; } = "";  // 空 = Mock 模式
     public string ApiKey { get; set; } = "";
-    public string Model { get; set; } = "deepseek-chat";
+    public string Model { get; set; } = "qwen3-vl-flash";
     public float Temperature { get; set; } = 0.7f;
     public int MaxTokens { get; set; } = 2048;
 }

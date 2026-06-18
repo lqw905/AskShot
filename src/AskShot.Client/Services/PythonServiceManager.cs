@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 
 namespace AskShot.Client.Services;
@@ -12,15 +13,19 @@ public class PythonServiceManager : IDisposable
     private Process? _process;
     private readonly string _pythonExe;
     private readonly string _serviceDir;
+    private readonly string _dataDir;
+    private readonly string _logDir;
     private const int Port = 8900;
     private const int MaxRestartAttempts = 3;
     private int _restartCount;
     private bool _disposed;
 
-    public PythonServiceManager(string pythonExe, string serviceDir)
+    public PythonServiceManager(string pythonExe, string serviceDir, string dataDir, string logDir)
     {
         _pythonExe = pythonExe;
         _serviceDir = serviceDir;
+        _dataDir = dataDir;
+        _logDir = logDir;
     }
 
     public async Task StartAsync(CancellationToken ct = default)
@@ -30,6 +35,9 @@ public class PythonServiceManager : IDisposable
             Console.WriteLine("[AskShot] Python service already running.");
             return;
         }
+
+        Directory.CreateDirectory(_dataDir);
+        Directory.CreateDirectory(_logDir);
 
         _process = new Process
         {
@@ -45,15 +53,18 @@ public class PythonServiceManager : IDisposable
             },
             EnableRaisingEvents = true,
         };
+        _process.StartInfo.Environment["ASKSHOT_DATA_DIR"] = _dataDir;
 
         _process.Exited += OnProcessExited;
         _process.OutputDataReceived += (_, e) =>
         {
             if (e.Data != null) Console.WriteLine($"[Python] {e.Data}");
+            if (e.Data != null) WriteServiceLog("python-service.log", e.Data);
         };
         _process.ErrorDataReceived += (_, e) =>
         {
             if (e.Data != null) Console.WriteLine($"[Python:err] {e.Data}");
+            if (e.Data != null) WriteServiceLog("python-service.err.log", e.Data);
         };
 
         _process.Start();
@@ -127,4 +138,18 @@ public class PythonServiceManager : IDisposable
     }
 
     public void Dispose() => Stop();
+
+    private void WriteServiceLog(string fileName, string line)
+    {
+        try
+        {
+            File.AppendAllText(
+                Path.Combine(_logDir, fileName),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {line}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Logging must not affect service lifetime.
+        }
+    }
 }
