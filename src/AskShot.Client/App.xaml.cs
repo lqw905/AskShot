@@ -63,14 +63,16 @@ public partial class App : Application
         var baseDir = AppContext.BaseDirectory;
         var serviceDir = FindServiceDir(baseDir);
         var pythonExe = FindPython(baseDir, serviceDir);
+        var serviceExe = FindServiceExecutable(baseDir);
 
-        if (pythonExe != null && serviceDir != null)
+        if (serviceExe != null || (pythonExe != null && serviceDir != null))
         {
             _pythonService = new PythonServiceManager(
-                pythonExe,
-                serviceDir,
+                pythonExe ?? "",
+                serviceDir ?? baseDir,
                 AppConfig.DataDir,
-                AppConfig.LogsDir);
+                AppConfig.LogsDir,
+                serviceExe);
             try { await _pythonService.StartAsync(); }
             catch (Exception ex) { WriteLog($"[Python] {ex}"); }
         }
@@ -267,14 +269,16 @@ public partial class App : Application
         var baseDir = AppContext.BaseDirectory;
         var serviceDir = FindServiceDir(baseDir);
         var pythonExe = FindPython(baseDir, serviceDir);
-        if (pythonExe == null || serviceDir == null)
+        var serviceExe = FindServiceExecutable(baseDir);
+        if (serviceExe == null && (pythonExe == null || serviceDir == null))
             throw new InvalidOperationException("找不到 Python 或 services/main.py。");
 
         _pythonService = new PythonServiceManager(
-            pythonExe,
-            serviceDir,
+            pythonExe ?? "",
+            serviceDir ?? baseDir,
             AppConfig.DataDir,
-            AppConfig.LogsDir);
+            AppConfig.LogsDir,
+            serviceExe);
         await _pythonService.StartAsync();
     }
 
@@ -359,6 +363,20 @@ public partial class App : Application
                 return candidate;
             dir = dir.Parent;
         }
+
+        return null;
+    }
+
+    private static string? FindServiceExecutable(string baseDir)
+    {
+        foreach (var p in new[] {
+            Path.Combine(baseDir, "askshot-service.exe"),
+            Path.Combine(baseDir, "service", "askshot-service.exe"),
+            Path.Combine(baseDir, "services", "askshot-service.exe"),
+            Path.Combine(baseDir, "..", "service", "askshot-service.exe"),
+        }.Select(Path.GetFullPath))
+            if (File.Exists(p))
+                return p;
 
         return null;
     }

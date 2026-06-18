@@ -257,6 +257,35 @@ dotnet publish src/AskShot.Client/AskShot.Client.csproj \
 cd services && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8900
 ```
 
+### 发布打包
+
+GitHub Actions 会在推送 `v*` tag 或手动运行 Release workflow 时打包：
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+产物：
+
+```text
+AskShot-0.0.1-macos-x64.zip      # AskShot.app + 内置 Python 代理服务
+AskShot-0.0.1-windows-x64.zip    # WPF portable build + 内置 Python 代理服务
+```
+
+本地打包命令：
+
+```bash
+# macOS
+VERSION=0.0.1 scripts/package-macos.sh
+```
+
+```powershell
+# Windows
+$env:VERSION = "0.0.1"
+powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
+```
+
 ### HTTP API
 
 | 方法 | 路径 | 说明 |

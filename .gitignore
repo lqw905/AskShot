@@ -2,6 +2,9 @@
 bin/
 obj/
 out/
+build/
+dist/
+*.spec
 
 # Python
 .venv/
@@ -12,6 +15,7 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 deps/
+.venv-package*/
 
 # Data
 data/

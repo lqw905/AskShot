@@ -15,17 +15,24 @@ public class PythonServiceManager : IDisposable
     private readonly string _serviceDir;
     private readonly string _dataDir;
     private readonly string _logDir;
+    private readonly string? _serviceExe;
     private const int Port = 8900;
     private const int MaxRestartAttempts = 3;
     private int _restartCount;
     private bool _disposed;
 
-    public PythonServiceManager(string pythonExe, string serviceDir, string dataDir, string logDir)
+    public PythonServiceManager(
+        string pythonExe,
+        string serviceDir,
+        string dataDir,
+        string logDir,
+        string? serviceExe = null)
     {
         _pythonExe = pythonExe;
         _serviceDir = serviceDir;
         _dataDir = dataDir;
         _logDir = logDir;
+        _serviceExe = serviceExe;
     }
 
     public async Task StartAsync(CancellationToken ct = default)
@@ -39,13 +46,16 @@ public class PythonServiceManager : IDisposable
         Directory.CreateDirectory(_dataDir);
         Directory.CreateDirectory(_logDir);
 
+        var useBundledService = !string.IsNullOrWhiteSpace(_serviceExe);
         _process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = _pythonExe,
-                Arguments = "main.py",
-                WorkingDirectory = _serviceDir,
+                FileName = useBundledService ? _serviceExe! : _pythonExe,
+                Arguments = useBundledService ? "" : "main.py",
+                WorkingDirectory = useBundledService
+                    ? Path.GetDirectoryName(_serviceExe!)!
+                    : _serviceDir,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,

@@ -69,7 +69,38 @@ def resolve_root_dir() -> Path:
 
 
 ROOT_DIR = resolve_root_dir()
-SERVICES_DIR = Path(os.environ.get("ASKSHOT_SERVICES_DIR", ROOT_DIR / "services")).expanduser().resolve()
+
+
+def bundled_service_executable() -> Path | None:
+    if not getattr(sys, "frozen", False):
+        return None
+
+    executable = Path(sys.executable).resolve()
+    candidates = [
+        executable.parent / "askshot-service",
+        executable.parent / "askshot-service.exe",
+        executable.parent.parent / "Resources" / "askshot-service",
+        executable.parent.parent / "Resources" / "askshot-service.exe",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def resolve_services_dir() -> Path:
+    env_services = os.environ.get("ASKSHOT_SERVICES_DIR")
+    if env_services:
+        return Path(env_services).expanduser().resolve()
+
+    service_exe = bundled_service_executable()
+    if service_exe is not None:
+        return service_exe.parent
+
+    return (ROOT_DIR / "services").resolve()
+
+
+SERVICES_DIR = resolve_services_dir()
 APP_SUPPORT_DIR = Path.home() / "Library" / "Application Support" / "AskShot"
 DATA_DIR = APP_SUPPORT_DIR / "data"
 CONFIG_PATH = APP_SUPPORT_DIR / "appsettings.mac.json"
@@ -227,7 +258,8 @@ class PythonServiceManager:
         if self.api.is_healthy():
             return
 
-        if not (SERVICES_DIR / "main.py").exists():
+        service_exe = bundled_service_executable()
+        if service_exe is None and not (SERVICES_DIR / "main.py").exists():
             raise FileNotFoundError(f"Cannot find Python service at {SERVICES_DIR}")
 
         LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -237,9 +269,12 @@ class PythonServiceManager:
         env = os.environ.copy()
         env["ASKSHOT_DATA_DIR"] = str(DATA_DIR)
 
+        command = [str(service_exe)] if service_exe else [sys.executable, "main.py"]
+        cwd = service_exe.parent if service_exe else SERVICES_DIR
+
         self.process = subprocess.Popen(
-            [sys.executable, "main.py"],
-            cwd=SERVICES_DIR,
+            command,
+            cwd=cwd,
             env=env,
             stdout=stdout,
             stderr=stderr,
