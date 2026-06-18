@@ -5,7 +5,13 @@ No database, no Docker, no OCR engine. Just Python.
 """
 
 from contextlib import asynccontextmanager
+import os
 from pathlib import Path
+import sys
+
+SERVICE_DIR = Path(__file__).resolve().parent
+if str(SERVICE_DIR) not in sys.path:
+    sys.path.insert(0, str(SERVICE_DIR))
 
 from fastapi import FastAPI, HTTPException
 import uvicorn
@@ -28,7 +34,7 @@ async def lifespan(app: FastAPI):
 
     print("[AskShot] Starting...")
     vlm_proxy = VlmProxy()
-    history_store = HistoryStore(data_dir=Path("data"))
+    history_store = HistoryStore(data_dir=Path(os.environ.get("ASKSHOT_DATA_DIR", "data")))
     print("[AskShot] Ready on :8900")
 
     yield
@@ -114,8 +120,4 @@ async def get_favorites():
 
 
 if __name__ == "__main__":
-    # Fix models import for direct execution
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent))
-    import models  # noqa: F811
     uvicorn.run(app, host="127.0.0.1", port=8900)

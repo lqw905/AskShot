@@ -2,7 +2,7 @@
 
 > 框选屏幕上的任何东西 → 视觉大模型直接回答你。零 OCR，零容器，开箱即用。
 
-AskShot 是一款轻量级的 Windows 桌面截图问答工具。你看到屏幕上不理解的内容，只需按 `Ctrl+Shift+A` 框选区域，它就会把截图直接发送给视觉语言模型（VLM），并在屏幕右下角以悬浮窗形式返回答案。
+AskShot 是一款轻量级的桌面截图问答工具。Windows 端使用 C# / WPF，macOS 端使用 PySide6；你看到屏幕上不理解的内容，只需按 `Ctrl+Shift+A` 框选区域，它就会把截图直接发送给视觉语言模型（VLM），并在屏幕右下角以悬浮窗形式返回答案。
 
 **核心设计理念：** 截图直发视觉模型，不经过 OCR 中转；本地只有一个 C# 桌面客户端 + 一个 Python HTTP 代理，无数据库、无容器、无重型依赖。
 
@@ -37,6 +37,8 @@ AskShot 解决的就是这个：**框选 → 问**，答案直接在右下角浮
 
 ### 方式一：从源码运行
 
+#### Windows
+
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/lqw905/AskShot.git
@@ -51,6 +53,34 @@ python main.py
 # 3. 编译并启动客户端（另开一个终端）
 cd ../src/AskShot.Client
 dotnet run -c Release
+```
+
+#### macOS
+
+macOS 端复用同一个 Python 后端，客户端入口在 `src/AskShot.Mac/askshot_mac.py`：
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/lqw905/AskShot.git
+cd AskShot
+
+# 2. 一键创建环境、安装依赖并启动 macOS 客户端
+./scripts/run-macos.sh
+```
+
+macOS 首次使用需要在系统设置里允许：
+
+- **Accessibility / 辅助功能**：用于全局快捷键监听。
+- **Screen Recording / 屏幕录制**：用于截图捕获。
+
+macOS 运行时配置和数据保存在：
+
+```text
+~/Library/Application Support/AskShot/
+├── appsettings.mac.json
+├── data/history/
+├── data/screenshots/
+└── logs/
 ```
 
 ### 方式二：发布为单文件可执行程序
@@ -178,6 +208,8 @@ AskShot/
 │   ├── history.py                    # JSON 文件历史记录
 │   ├── models.py                     # Pydantic 请求/响应模型
 │   └── requirements.txt              # fastapi + uvicorn + httpx
+├── scripts/
+│   └── run-macos.sh                  # macOS 开发启动脚本
 └── src/AskShot.Client/            # C# WPF 桌面客户端
     ├── Models/AppConfig.cs           # 配置模型（LLM/Hotkey/General）
     ├── Services/
@@ -192,6 +224,9 @@ AskShot/
         └── MainWindow.xaml(.cs)      # 控制台（LLM 配置 + 测试）
     ├── App.xaml(.cs)                 # 应用入口 + 全局异常处理
     └── AskShot.Client.csproj      # .NET 9 WPF 项目文件
+└── src/AskShot.Mac/               # macOS PySide6 客户端
+    ├── askshot_mac.py             # 托盘 / 热键 / 截图框选 / 配置 / 历史搜索
+    └── requirements.txt           # macOS 客户端 + 后端依赖
 ```
 
 ---
@@ -224,8 +259,8 @@ cd services && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8900
 |---|---|---|
 | `GET` | `/health` | 健康检查，返回 `{"status":"ok"}` |
 | `POST` | `/analyze` | 发送截图进行 VLM 分析 |
-| `POST` | `/api/test` | 测试 LLM API 连通性（不发送截图） |
-| `POST` | `/history/add` | 写入一条分析记录 |
+| `POST` | `/config/test` | 测试 LLM API 连通性（不发送截图） |
+| `POST` | `/history/save` | 写入一条分析记录 |
 | `POST` | `/history/search` | 按关键词检索历史 |
 
 `/analyze` 请求体示例：
@@ -255,6 +290,9 @@ cd services && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8900
 | 程序启动即崩溃 | 字体缓存损坏或配置文件损坏 | 删除 `bin/publish/appsettings.json` 后重启 |
 | Python 服务无法启动 | `python` 不在 PATH，或端口被占用 | 确认 `python --version` 可用，端口 8900 无冲突 |
 | 控制台报 HTTP 500 | Python 服务有异常 | 查看 `bin/publish/` 下的日志文件 |
+| macOS 快捷键无响应 | 未授予辅助功能权限 | 控制台 General 页打开 Accessibility，允许运行 AskShot 的终端或打包 App |
+| macOS 截图为空或黑屏 | 未授予屏幕录制权限 | 控制台 General 页打开 Screen Recording，允许运行 AskShot 的终端或打包 App 后重启 |
+| macOS 后端启动失败 | 服务日志有异常 | 查看 `~/Library/Application Support/AskShot/logs/` |
 
 ---
 

@@ -4,6 +4,7 @@ obj/
 out/
 
 # Python
+.venv/
 venv/
 __pycache__/
 *.pyc
