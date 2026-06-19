@@ -85,9 +85,9 @@ public partial class RegionSelector : Window
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
-        if (!_isSelecting) return;
-
         Point pos = e.GetPosition(this);
+
+        if (!_isSelecting) return;
 
         double left = Math.Min(_startDip.X, pos.X);
         double top = Math.Min(_startDip.Y, pos.Y);

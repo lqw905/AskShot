@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"
         AllowsTransparency="True"
-        Topmost="False"
+        Topmost="True"
         ShowInTaskbar="False"
         Background="Transparent"
         Width="430" Height="320"
@@ -38,7 +38,6 @@
                 <TextBlock x:Name="ResultText" Foreground="#202124" FontSize="14"
                            LineHeight="22" TextWrapping="Wrap" Text="分析中..."/>
             </ScrollViewer>
-
             <Border Grid.Row="2" Background="#F1F3F4" CornerRadius="6">
                 <Grid>
                     <Grid.ColumnDefinitions>

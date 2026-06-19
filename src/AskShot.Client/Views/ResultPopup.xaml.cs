@@ -7,48 +7,49 @@ namespace AskShot.Client.Views;
 public partial class ResultPopup : Window
 {
     private bool _pinned;
-    private bool _positioned;
 
     public bool IsPinned => _pinned;
+
+    public string CurrentAnswer { get; private set; } = "";
 
     public ResultPopup()
     {
         InitializeComponent();
     }
 
-    /// <summary>
-    /// Show analysis result near the mouse cursor.
-    /// </summary>
     public void ShowResult(string text, Point cursorPos)
     {
-        ResultText.Text = CleanDisplayText(text);
+        var cleaned = CleanDisplayText(text);
+        CurrentAnswer = cleaned;
+        ResultText.Text = cleaned;
 
-        // Always position in the bottom-right corner of the screen work area.
-        // Use WorkArea to avoid overlap with taskbar.
+        double w = double.IsNaN(Width) ? 430 : Width;
+        double h = double.IsNaN(Height) ? 320 : Height;
         double workRight = SystemParameters.WorkArea.Right;
         double workBottom = SystemParameters.WorkArea.Bottom;
 
-        // Defer positioning until window is rendered so ActualWidth/Height are known.
-        // We'll set position on next render cycle using SizeChanged.
-        if (!_positioned)
-        {
-            Left = workRight - ActualWidth - 16;
-            Top = workBottom - ActualHeight - 16;
-            _positioned = true;
-        }
+        Left = workRight - w - 16;
+        Top = workBottom - h - 16;
 
         Show();
         Activate();
         QuestionBox.Focus();
     }
 
-    public void AppendText(string text)
+    public void AppendFollowUp(string text, string question)
     {
-        ResultText.Text += "\n\n" + CleanDisplayText(text);
+        var cleaned = CleanDisplayText(text, question);
+        CurrentAnswer = cleaned;
+        ResultText.Text += $"\n\n{question}\n{cleaned}";
     }
 
     // Follow-up question event
     public event EventHandler<string>? FollowUpAsked;
+
+    public void ShowLoadingForQuestion(string question)
+    {
+        ResultText.Text += "\n\n分析中...";
+    }
 
     private void AskFollowUp_Click(object sender, RoutedEventArgs e)
     {
@@ -57,7 +58,6 @@ public partial class ResultPopup : Window
         {
             FollowUpAsked?.Invoke(this, question);
             QuestionBox.Clear();
-            ResultText.Text += $"\n\n追问: {question}\n分析中...";
         }
     }
 
@@ -97,7 +97,7 @@ public partial class ResultPopup : Window
         Clipboard.SetText(ResultText.Text);
     }
 
-    private static string CleanDisplayText(string text)
+    private static string CleanDisplayText(string text, string? stripQuestion = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
 
@@ -112,6 +112,27 @@ public partial class ResultPopup : Window
         cleaned = Regex.Replace(cleaned, @"(?m)^\s*[-*_]{3,}\s*$", "");
         cleaned = Regex.Replace(cleaned, @"[ \t]+\n", "\n");
         cleaned = Regex.Replace(cleaned, @"\n{3,}", "\n\n");
+
+        // Strip leading repetition of the user's question from the explanation body.
+        if (!string.IsNullOrWhiteSpace(stripQuestion))
+        {
+            var lines = cleaned.Split('\n');
+            var q = stripQuestion.Trim();
+            for (int i = 0; i < Math.Min(3, lines.Length); i++)
+            {
+                var line = lines[i].Trim();
+                if (line.Equals(q, StringComparison.OrdinalIgnoreCase) ||
+                    line.StartsWith(q, StringComparison.OrdinalIgnoreCase) ||
+                    line.Replace(" ", "").Contains(q.Replace(" ", ""), StringComparison.OrdinalIgnoreCase))
+                {
+                    lines[i] = "";
+                }
+            }
+            cleaned = string.Join("\n", lines);
+            // Re-collapse multiple blank lines after stripping
+            cleaned = Regex.Replace(cleaned, @"\n{3,}", "\n\n");
+        }
+
         return cleaned.Trim();
     }
 }

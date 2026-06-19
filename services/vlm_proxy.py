@@ -1,4 +1,4 @@
-"""VLM proxy — sends screenshot directly to user-configured OpenAI-compatible API."""
+"""VLM proxy - sends screenshot directly to user-configured OpenAI-compatible API."""
 
 import re
 
@@ -6,42 +6,40 @@ import httpx
 
 from models import ApiConfig, AnalyzeResponse
 
-SYSTEM_PROMPT = """你是一个“截图文字解释器”。用户通常框选的是一小段不理解的文字，目的是立刻知道它是什么意思，并顺手记住相关知识。
+SYSTEM_PROMPT = """你是一个截图文字解释器。用户通常框选的是一小段不理解的文字，目的是立刻知道它是什么意思，并记住相关知识。
 
 默认回答策略：
 1. 先判断截图里有没有可读文字。有文字时，只围绕文字解释，不要泛泛描述界面、窗口、颜色、按钮位置等无关信息。
-2. 如果文字清晰，先用一行写出“这句话/这个词的意思是：...”，直接给结论。
+2. 如果文字清晰，先用一行写出"这句话/这个词的意思是：..."，直接给结论。
 3. 再补充必要背景：它出现在什么语境、为什么会这样、用户应该怎么理解。背景只保留和文字含义直接相关的信息。
 4. 如果是错误、警告、配置项、按钮、代码、英文术语或文档句子，重点解释术语含义和下一步该怎么做。
-5. 最后给一个“记忆点”：用一句通俗的话帮助用户记住这个概念。
+5. 最后给一个记忆点：用一句通俗的话帮助用户记住这个概念。
 6. 如果截图里没有明显可读文字，才简短描述图片内容。
-7. 不要臆造看不清的文字；看不清时明确说“这部分看不清”，并只解释能确认的内容。
+7. 不要臆造看不清的文字；看不清时明确说"这部分看不清"，并只解释能确认的内容。
 
 输出要求：
 - 使用中文。
 - 简洁、准确、少废话。
 - 默认 3 到 6 行即可。
 - 不要使用 Markdown 格式，不要使用 **、###、* 这类符号。
-- 不要输出“截图展示了...”这类模板化开场，除非截图没有文字。"""
+- 不要输出"截图展示了..."这类模板化开场，除非截图没有文字。"""
 
-MOCK_RESPONSE = """📸 截图分析结果 (Mock 模式)
+FOLLOWUP_SYSTEM_PROMPT = """你是一个截图问答助手。用户针对刚才看过的截图继续提问，请用简洁、准确的中文直接回答他的问题。不要在开头重复或复述用户的问题，直接给出答案。不要重复解释整张截图，聚焦问题本身。不要使用 Markdown。"""
 
-1. 内容识别：这是一个桌面应用截图，包含界面元素和文字信息。
+DEFAULT_FIRST_QUESTION = "请只解释截图中文字的含义，帮助我理解并记住；如果没有文字，再简短描述图片内容。不要使用 Markdown 符号。"
+
+MOCK_RESPONSE = """1. 内容识别：这是一个桌面应用截图，包含界面元素和文字信息。
 
 2. 关键信息：检测到窗口标题栏、文本内容、按钮等常见 UI 元素。
 
 3. 状态分析：未检测到明显的错误或异常信息。
 
-4. 建议：如需使用真实 AI 分析，请在控制台配置视觉模型 API：
-   - 本地模型：Ollama + minicpm-v / llama3.2-vision
-   - 云端 API：OpenAI GPT-4V / 其他兼容接口
-
-💡 在控制台 → LLM 配置中填入 API 地址即可切换为真实分析。"""
+4. 建议：如需使用真实 AI 分析，请在控制台配置视觉模型 API。
+"""
 
 
 class VlmProxy:
     async def test_connection(self, api_config: ApiConfig) -> tuple[bool, str]:
-        """Check the configured OpenAI-compatible endpoint without running inference."""
         endpoint = (api_config.endpoint or "").strip().rstrip("/")
         if not endpoint or endpoint == "mock":
             return False, "未配置 API 地址，当前会进入 Mock 模式。"
@@ -67,40 +65,50 @@ class VlmProxy:
         except Exception as ex:
             return False, f"连接测试失败: {ex}"
 
-    async def check_ready(self) -> bool:
-        """Quick connectivity check to the default endpoint."""
-        try:
-            async with httpx.AsyncClient(timeout=3) as client:
-                resp = await client.get("http://localhost:8080/v1/models")
-                return resp.status_code == 200
-        except Exception:
-            return False
-
     async def analyze(
         self,
         image_base64: str,
         user_question: str | None,
+        previous_answer: str | None,
         api_config: ApiConfig,
     ) -> AnalyzeResponse:
-        """Send screenshot directly to VLM — mock mode if no endpoint configured."""
-        # Mock mode: no API configured
         if not api_config.endpoint or api_config.endpoint == "mock":
             return AnalyzeResponse(summary=MOCK_RESPONSE)
 
-        user_content = [
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{image_base64}"},
-            },
-        ]
+        image_item = {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{image_base64}"},
+        }
 
-        text = user_question or "请只解释截图中文字的含义，帮助我理解并记住；如果没有文字，再简短描述图片内容。不要使用 Markdown 符号。"
-        user_content.append({"type": "text", "text": text})
+        is_followup = bool(previous_answer)
+        sys_prompt = FOLLOWUP_SYSTEM_PROMPT if is_followup else SYSTEM_PROMPT
 
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ]
+        if is_followup:
+            first_text = DEFAULT_FIRST_QUESTION
+            messages = [
+                {"role": "system", "content": sys_prompt},
+                {
+                    "role": "user",
+                    "content": [image_item, {"type": "text", "text": first_text}],
+                },
+                {"role": "assistant", "content": previous_answer or ""},
+                {
+                    "role": "user",
+                    "content": [
+                        image_item,
+                        {"type": "text", "text": user_question or "继续提问"},
+                    ],
+                },
+            ]
+        else:
+            first_text = user_question or DEFAULT_FIRST_QUESTION
+            messages = [
+                {"role": "system", "content": sys_prompt},
+                {
+                    "role": "user",
+                    "content": [image_item, {"type": "text", "text": first_text}],
+                },
+            ]
 
         headers = {"Content-Type": "application/json"}
         if api_config.api_key:
@@ -124,7 +132,6 @@ class VlmProxy:
             summary = clean_response_text(data["choices"][0]["message"]["content"])
             return AnalyzeResponse(summary=summary)
         except httpx.HTTPStatusError as ex:
-            # Re-throw so the caller can see the HTTP error
             raise Exception(f"API Error {ex.response.status_code}: {ex.response.text[:300]}")
         except Exception as ex:
             import traceback
@@ -132,7 +139,6 @@ class VlmProxy:
 
 
 def clean_response_text(text: str) -> str:
-    """Normalize model output for compact plain-text popups."""
     if not text:
         return ""
 

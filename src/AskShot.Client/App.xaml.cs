@@ -165,14 +165,17 @@ public partial class App : Application
 
     private async void OnFollowUp(object? sender, string question)
     {
+        if (_currentPopup == null) return;
         if (_inferenceClient != null && await _inferenceClient.IsHealthy())
         {
             var latestConfig = AppConfig.Load();
+            _currentPopup.ShowLoadingForQuestion(question);
             var result = await _inferenceClient.AnalyzeAsync(
                 _lastImageBase64,
                 userQuestion: question,
+                previousAnswer: _currentPopup.CurrentAnswer,
                 llmConfig: latestConfig.Llm);
-            if (result != null) _currentPopup?.AppendText(result.Summary);
+            if (result != null) _currentPopup.AppendFollowUp(result.Summary, question);
         }
     }
 

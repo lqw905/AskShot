@@ -17,9 +17,9 @@
                Opacity="0.5" />
         <!-- Selection outline -->
         <Border x:Name="SelectionBorder"
-                BorderBrush="#FF0066FF"
+                BorderBrush="#FFFFFFFF"
                 BorderThickness="2"
-                Background="#220066FF"
+                Background="#22FFFFFF"
                 Canvas.Left="0"
                 Canvas.Top="0"
                 Visibility="Collapsed" />

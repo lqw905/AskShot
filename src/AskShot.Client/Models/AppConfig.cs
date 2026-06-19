@@ -24,9 +24,9 @@ public class AppConfig
 
     public static AppConfig Load()
     {
-        Directory.CreateDirectory(AppDataDir);
-        Directory.CreateDirectory(DataDir);
-        Directory.CreateDirectory(LogsDir);
+        try { Directory.CreateDirectory(AppDataDir); } catch { }
+        try { Directory.CreateDirectory(DataDir); } catch { }
+        try { Directory.CreateDirectory(LogsDir); } catch { }
 
         var path = File.Exists(ConfigPath) ? ConfigPath : LegacyConfigPath;
         if (File.Exists(path))
@@ -46,9 +46,30 @@ public class AppConfig
 
     public void Save()
     {
-        Directory.CreateDirectory(AppDataDir);
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(ConfigPath, json);
+
+        // 优先写 AppData。若被拒绝，回退到可执行目录
+        try
+        {
+            Directory.CreateDirectory(AppDataDir);
+            File.WriteAllText(ConfigPath, json);
+            return;
+        }
+        catch (UnauthorizedAccessException) { }
+        catch (IOException) { }
+
+        // 回退：写到可执行目录下的 appsettings.json
+        try
+        {
+            File.WriteAllText(LegacyConfigPath, json);
+        }
+        catch
+        {
+            // 最终回退：写到临时目录
+            var fallback = Path.Combine(Path.GetTempPath(), "AskShot", "appsettings.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(fallback)!);
+            File.WriteAllText(fallback, json);
+        }
     }
 
     private static void ApplyLegacyLlmFields(AppConfig config, string json)

@@ -14,6 +14,7 @@ class ApiConfig(BaseModel):
 class AnalyzeRequest(BaseModel):
     image_base64: str
     user_question: str | None = None
+    previous_answer: str | None = None
     api_config: ApiConfig | None = None
 
 

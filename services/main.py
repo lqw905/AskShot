@@ -59,6 +59,7 @@ async def analyze(request: AnalyzeRequest):
         return await vlm_proxy.analyze(
             image_base64=request.image_base64,
             user_question=request.user_question,
+            previous_answer=request.previous_answer,
             api_config=request.api_config or ApiConfig(),
         )
     except Exception as ex:

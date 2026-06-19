@@ -39,6 +39,7 @@ public class InferenceClient : IDisposable
     public async Task<AnalyzeResult?> AnalyzeAsync(
         string imageBase64,
         string? userQuestion = null,
+        string? previousAnswer = null,
         LlmConfig? llmConfig = null)
     {
         llmConfig ??= new LlmConfig();
@@ -46,6 +47,7 @@ public class InferenceClient : IDisposable
         {
             image_base64 = imageBase64,
             user_question = userQuestion,
+            previous_answer = previousAnswer,
             api_config = ToApiConfigPayload(llmConfig),
         };
 
