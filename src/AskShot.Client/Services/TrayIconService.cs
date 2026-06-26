@@ -101,7 +101,7 @@ public class TrayIconService : IDisposable
 
             var panel = new System.Windows.Controls.StackPanel();
             panel.Children.Add(CreateMenuButton("控制台", () => { popup.IsOpen = false; OpenConsole?.Invoke(); }));
-            panel.Children.Add(CreateMenuButton("搜索历史", () => { popup.IsOpen = false; OpenSearch?.Invoke(); }));
+            panel.Children.Add(CreateMenuButton("搜索历史", () => { popup.IsOpen = false; MessageBox.Show("功能尚未开启", "AskShot"); }));
             panel.Children.Add(new System.Windows.Controls.Border
             {
                 Background = new SolidColorBrush(Color.FromRgb(0xED, 0xE9, 0xDE)), // Claude MutedBrush
