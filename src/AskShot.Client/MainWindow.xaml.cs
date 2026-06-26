@@ -144,10 +144,14 @@ public partial class MainWindow : Window
 
     private void BrowseScreenshotPath_Click(object sender, RoutedEventArgs e)
     {
+        var initial = TxtScreenshotPath.Text;
+        if (string.IsNullOrEmpty(initial) || !Directory.Exists(initial))
+            initial = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
             Title = "选择截图保存目录",
-            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            InitialDirectory = initial,
         };
         if (dialog.ShowDialog() == true)
         {
