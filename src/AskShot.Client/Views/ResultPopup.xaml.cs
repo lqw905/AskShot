@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Text.RegularExpressions;
 
@@ -66,6 +67,7 @@ public partial class ResultPopup : Window
         var cleaned = CleanDisplayText(text, question);
         CurrentAnswer = cleaned;
         ResultText.Text += $"\n\n{question}\n{cleaned}";
+        ResultText.ScrollToEnd();
     }
 
     // Follow-up question event
@@ -74,6 +76,7 @@ public partial class ResultPopup : Window
     public void ShowLoadingForQuestion(string question)
     {
         ResultText.Text += "\n\n分析中...";
+        ResultText.ScrollToEnd();
     }
 
     private void AskFollowUp_Click(object sender, RoutedEventArgs e)
