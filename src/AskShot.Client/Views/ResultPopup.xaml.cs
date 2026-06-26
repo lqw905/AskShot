@@ -17,11 +17,31 @@ public partial class ResultPopup : Window
         InitializeComponent();
     }
 
+    public void ShowLoading(Point cursorPos)
+    {
+        LoadingPanel.Visibility = Visibility.Visible;
+        ResultText.Visibility = Visibility.Collapsed;
+
+        double w = double.IsNaN(Width) ? 430 : Width;
+        double h = double.IsNaN(Height) ? 320 : Height;
+        double workRight = SystemParameters.WorkArea.Right;
+        double workBottom = SystemParameters.WorkArea.Bottom;
+
+        Left = workRight - w - 16;
+        Top = workBottom - h - 16;
+
+        Show();
+        Activate();
+    }
+
     public void ShowResult(string text, Point cursorPos)
     {
         var cleaned = CleanDisplayText(text);
         CurrentAnswer = cleaned;
         ResultText.Text = cleaned;
+
+        LoadingPanel.Visibility = Visibility.Collapsed;
+        ResultText.Visibility = Visibility.Visible;
 
         double w = double.IsNaN(Width) ? 430 : Width;
         double h = double.IsNaN(Height) ? 320 : Height;

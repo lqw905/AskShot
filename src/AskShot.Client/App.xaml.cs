@@ -132,7 +132,7 @@ public partial class App : Application
                 _currentPopup.Close();
             _currentPopup = new ResultPopup();
             _currentPopup.FollowUpAsked += OnFollowUp;
-            _currentPopup.ShowResult($"📐 ({rx},{ry}) {rw}x{rh}", new Point(cursorPt.X, cursorPt.Y));
+            _currentPopup.ShowLoading(new Point(cursorPt.X, cursorPt.Y));
 
             if (await _inferenceClient.IsHealthy())
             {

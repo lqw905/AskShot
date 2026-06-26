@@ -34,10 +34,42 @@
                 </StackPanel>
             </Grid>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,12,0,8">
-                <TextBlock x:Name="ResultText" Foreground="#202124" FontSize="14"
-                           LineHeight="22" TextWrapping="Wrap" Text="分析中..."/>
-            </ScrollViewer>
+            <Grid Grid.Row="1" Margin="0,12,0,8">
+                <!-- Loading State -->
+                <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center"
+                            HorizontalAlignment="Center" Visibility="Collapsed">
+                    <Grid Width="36" Height="36" Margin="0,0,0,10">
+                        <Ellipse Width="36" Height="36" Stroke="#E8EAED"
+                                 StrokeThickness="3" Fill="Transparent"/>
+                        <Ellipse Width="36" Height="36" Stroke="#4285F4"
+                                 StrokeThickness="3" Fill="Transparent"
+                                 StrokeDashArray="28,84"
+                                 RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <RotateTransform Angle="0"/>
+                            </Ellipse.RenderTransform>
+                            <Ellipse.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle"
+                                                             From="0" To="360" Duration="0:0:1"
+                                                             FillBehavior="HoldEnd"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Ellipse.Triggers>
+                        </Ellipse>
+                    </Grid>
+                    <TextBlock Text="思考中..." Foreground="#5F6368" FontSize="14"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+                <!-- Result State -->
+                <TextBox x:Name="ResultText" Foreground="#202124" FontSize="14"
+                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                         IsReadOnly="True" Background="Transparent" BorderThickness="0"
+                         Padding="0" Text="" Visibility="Collapsed"/>
+            </Grid>
             <Border Grid.Row="2" Background="#F1F3F4" CornerRadius="6">
                 <Grid>
                     <Grid.ColumnDefinitions>
