@@ -22,6 +22,7 @@ public partial class App : Application
     private HistoryWindow? _historyWindow;
     private Window? _hostWindow;
     private string _lastImageBase64 = "";
+    private bool _isCapturing;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -103,6 +104,8 @@ public partial class App : Application
 
     private async void OnCaptureHotkey()
     {
+        if (_isCapturing) return;
+        _isCapturing = true;
         try
         {
             _config = AppConfig.Load();
@@ -160,6 +163,10 @@ public partial class App : Application
         catch (Exception ex)
         {
             MessageBox.Show($"截图失败:\n{ex}", "AskShot 错误");
+        }
+        finally
+        {
+            _isCapturing = false;
         }
     }
 
