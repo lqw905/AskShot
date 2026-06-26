@@ -180,15 +180,32 @@ public class TrayIconService : IDisposable
 
     private static nint CreateDefaultIcon()
     {
+        var brand = new SolidColorBrush(Color.FromRgb(0xC9, 0x64, 0x42));
+        brand.Freeze();
+        var whitePen = new Pen(Brushes.White, 1.8);
+        whitePen.Freeze();
+
         var visual = new DrawingVisual();
         using (var ctx = visual.RenderOpen())
         {
-            ctx.DrawRectangle(new SolidColorBrush(Color.FromRgb(0xC9, 0x64, 0x42)), null, new Rect(0, 0, 32, 32)); // Claude BrandBrush
-            var text = new FormattedText("SM",
-                System.Globalization.CultureInfo.InvariantCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Arial"), 14, Brushes.White, 1);
-            ctx.DrawText(text, new Point(2, 6));
+            // Background — rounded square in brand color
+            ctx.DrawRoundedRectangle(brand, null, new Rect(0, 0, 32, 32), 5, 5);
+
+            // Camera body — rounded rectangle outline (thicker stroke)
+            var bodyPen = new Pen(Brushes.White, 1.6);
+            ctx.DrawRoundedRectangle(null, bodyPen, new Rect(5, 9, 22, 16), 3, 3);
+
+            // Viewfinder bump on top
+            ctx.DrawRectangle(null, bodyPen, new Rect(12, 6, 8, 4));
+
+            // Lens — outer ring
+            ctx.DrawEllipse(null, whitePen, new Point(16, 18), 5.5, 5.5);
+
+            // Lens — inner dot (aperture)
+            ctx.DrawEllipse(Brushes.White, null, new Point(16, 18), 2.5, 2.5);
+
+            // Flash / indicator dot
+            ctx.DrawEllipse(Brushes.White, null, new Point(24, 12), 1.5, 1.5);
         }
 
         var rtb = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32);
@@ -199,7 +216,7 @@ public class TrayIconService : IDisposable
         rtb.CopyPixels(pixels, stride, 0);
 
         for (int i = 0; i < pixels.Length; i += 4)
-            pixels[i + 3] = 255;
+            if (pixels[i + 3] > 0) pixels[i + 3] = 255; // only opaque for non-transparent pixels
 
         var screenDC = GetDC(nint.Zero);
         var hbmColor = CreateCompatibleBitmap(screenDC, 32, 32);
