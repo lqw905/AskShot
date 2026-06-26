@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Text.RegularExpressions;
 
 namespace AskShot.Client.Views;
@@ -36,8 +38,14 @@ public partial class ResultPopup : Window
         Left = workRight - w - 16;
         Top = workBottom - h - 16;
 
+        // Fade in over 200ms
+        Opacity = 0;
         Show();
         Activate();
+
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
+        fade.EasingFunction = new QuadraticEase();
+        BeginAnimation(OpacityProperty, fade);
     }
 
     public void ShowResult(string text, Point cursorPos)
