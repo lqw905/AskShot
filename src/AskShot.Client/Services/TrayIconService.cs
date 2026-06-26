@@ -104,7 +104,7 @@ public class TrayIconService : IDisposable
             panel.Children.Add(CreateMenuButton("搜索历史", () => { popup.IsOpen = false; OpenSearch?.Invoke(); }));
             panel.Children.Add(new System.Windows.Controls.Border
             {
-                Background = Brushes.LightGray,
+                Background = new SolidColorBrush(Color.FromRgb(0xED, 0xE9, 0xDE)), // Claude MutedBrush
                 Height = 1,
                 Margin = new Thickness(4, 2, 4, 2),
             });
@@ -112,8 +112,8 @@ public class TrayIconService : IDisposable
 
             popup.Child = new System.Windows.Controls.Border
             {
-                Background = Brushes.White,
-                BorderBrush = Brushes.LightGray,
+                Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xF5)), // Claude BackgroundBrush
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0xDA, 0xD9, 0xD4)), // Claude BorderBrush
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(4),
                 Child = panel,
@@ -147,7 +147,8 @@ public class TrayIconService : IDisposable
 
         // Mouse hover effect
         System.Windows.Controls.Button? b = btn;
-        b.MouseEnter += (_, _) => b.Background = Brushes.LightBlue;
+        var hoverBrush = new SolidColorBrush(Color.FromRgb(0xF5, 0xF4, 0xEF)); // Claude CardBackgroundBrush
+        b.MouseEnter += (_, _) => b.Background = hoverBrush;
         b.MouseLeave += (_, _) => b.Background = Brushes.Transparent;
 
         return btn;
@@ -182,7 +183,7 @@ public class TrayIconService : IDisposable
         var visual = new DrawingVisual();
         using (var ctx = visual.RenderOpen())
         {
-            ctx.DrawRectangle(Brushes.DodgerBlue, null, new Rect(0, 0, 32, 32));
+            ctx.DrawRectangle(new SolidColorBrush(Color.FromRgb(0xC9, 0x64, 0x42)), null, new Rect(0, 0, 32, 32)); // Claude BrandBrush
             var text = new FormattedText("SM",
                 System.Globalization.CultureInfo.InvariantCulture,
                 FlowDirection.LeftToRight,

@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 using AskShot.Client.Models;
 using AskShot.Client.Services;
 
@@ -60,15 +63,48 @@ public partial class MainWindow : Window
         ConfigSaved?.Invoke();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  Title Bar
+    // ═══════════════════════════════════════════════════════════
+
+    private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is FrameworkElement fe &&
+            (fe == BtnMinimize || fe == BtnClose)) return;
+        DragMove();
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    // ═══════════════════════════════════════════════════════════
+    //  Toast Notification
+    // ═══════════════════════════════════════════════════════════
+
+    private async void ShowToast(string message, int durationMs = 2000)
+    {
+        ToastText.Text = message;
+        ToastBar.Visibility = Visibility.Visible;
+        await Task.Delay(durationMs);
+        ToastBar.Visibility = Visibility.Collapsed;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  Tab Actions
+    // ═══════════════════════════════════════════════════════════
+
     private async void TestConnection_Click(object sender, RoutedEventArgs e)
     {
         LblConnectionStatus.Text = "测试中...";
+        StatusDot.Fill = (Brush)FindResource("MutedForegroundBrush");
         SaveConfigFromUi();
 
         var healthy = await _client.IsHealthy();
         if (!healthy)
         {
-            LblConnectionStatus.Text = "● Python 服务未响应";
+            LblConnectionStatus.Text = "Python 服务未响应";
+            StatusDot.Fill = (Brush)FindResource("ErrorBrush");
             return;
         }
 
@@ -77,21 +113,18 @@ public partial class MainWindow : Window
             var result = await _client.TestLlmConnectionAsync(_config.Llm);
             if (result == null)
             {
-                LblConnectionStatus.Text = "● API 测试无响应";
+                LblConnectionStatus.Text = "API 测试无响应";
+                StatusDot.Fill = (Brush)FindResource("ErrorBrush");
                 return;
             }
 
-            LblConnectionStatus.Text = result.Ok
-                ? $"● {result.Message}"
-                : $"● {result.Message}";
-            LblConnectionStatus.Foreground = result.Ok
-                ? System.Windows.Media.Brushes.ForestGreen
-                : System.Windows.Media.Brushes.OrangeRed;
+            LblConnectionStatus.Text = result.Message;
+            StatusDot.Fill = (Brush)FindResource(result.Ok ? "SuccessBrush" : "ErrorBrush");
         }
         catch (Exception ex)
         {
-            LblConnectionStatus.Text = $"● API 测试失败: {ex.Message}";
-            LblConnectionStatus.Foreground = System.Windows.Media.Brushes.OrangeRed;
+            LblConnectionStatus.Text = $"API 测试失败: {ex.Message}";
+            StatusDot.Fill = (Brush)FindResource("ErrorBrush");
         }
     }
 
@@ -106,7 +139,7 @@ public partial class MainWindow : Window
     private void SaveConfig_Click(object sender, RoutedEventArgs e)
     {
         SaveConfigFromUi();
-        MessageBox.Show("设置已保存。", "AskShot");
+        ShowToast("设置已保存");
     }
 
     private void BrowseScreenshotPath_Click(object sender, RoutedEventArgs e)
@@ -125,18 +158,38 @@ public partial class MainWindow : Window
 
     private void ClearHistory_Click(object sender, RoutedEventArgs e)
     {
-        var result = MessageBox.Show("确定要清空所有历史记录？", "确认",
-            MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (result == MessageBoxResult.Yes)
+        var btn = (System.Windows.Controls.Button)sender;
+        if (btn.Content?.ToString() == "清空历史记录")
         {
-            var historyDir = Path.Combine(AppConfig.DataDir, "history");
-            if (Directory.Exists(historyDir))
+            // First click: ask for confirmation
+            btn.Content = "确认清空？";
+            btn.Style = (Style)FindResource("PrimaryButton");
+            // Reset after 3 seconds if not confirmed
+            DispatcherTimer timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            timer.Tick += (_, _) =>
             {
-                foreach (var f in Directory.GetFiles(historyDir, "*.json"))
-                    File.Delete(f);
-            }
-            MessageBox.Show("已清空。", "完成");
+                timer.Stop();
+                if (btn.Content?.ToString() == "确认清空？")
+                {
+                    btn.Content = "清空历史记录";
+                    btn.Style = (Style)FindResource("DangerGhostButton");
+                }
+            };
+            timer.Start();
+            return;
         }
+
+        // Confirmed: clear history
+        btn.Content = "清空历史记录";
+        btn.Style = (Style)FindResource("DangerGhostButton");
+
+        var historyDir = Path.Combine(AppConfig.DataDir, "history");
+        if (Directory.Exists(historyDir))
+        {
+            foreach (var f in Directory.GetFiles(historyDir, "*.json"))
+                File.Delete(f);
+        }
+        ShowToast("已清空所有历史记录");
     }
 
     private void OpenDataDir_Click(object sender, RoutedEventArgs e)
@@ -149,6 +202,7 @@ public partial class MainWindow : Window
     private async void RestartService_Click(object sender, RoutedEventArgs e)
     {
         LblServiceStatus.Text = "Python 服务: 重启中...";
+        ServiceDot.Fill = (Brush)FindResource("MutedForegroundBrush");
         if (RestartRequested != null)
             await RestartRequested.Invoke();
         await RefreshServiceStatusAsync();
@@ -162,7 +216,17 @@ public partial class MainWindow : Window
     private async Task RefreshServiceStatusAsync()
     {
         LblServiceStatus.Text = "Python 服务: 检测中...";
+        ServiceDot.Fill = (Brush)FindResource("MutedForegroundBrush");
         var healthy = await _client.IsHealthy();
-        LblServiceStatus.Text = healthy ? "Python 服务: ● 运行中" : "Python 服务: ○ 未运行";
+        if (healthy)
+        {
+            LblServiceStatus.Text = "Python 服务: 运行中";
+            ServiceDot.Fill = (Brush)FindResource("SuccessBrush");
+        }
+        else
+        {
+            LblServiceStatus.Text = "Python 服务: 未运行";
+            ServiceDot.Fill = (Brush)FindResource("ErrorBrush");
+        }
     }
 }

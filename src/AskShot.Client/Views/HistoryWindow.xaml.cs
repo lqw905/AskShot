@@ -18,6 +18,21 @@ public partial class HistoryWindow : Window
         Loaded += async (_, _) => await LoadRecentAsync();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  Title Bar
+    // ═══════════════════════════════════════════════════════════
+
+    private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is FrameworkElement fe &&
+            (fe == BtnMinimize || fe == BtnClose)) return;
+        DragMove();
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
     private async Task LoadRecentAsync()
     {
         try

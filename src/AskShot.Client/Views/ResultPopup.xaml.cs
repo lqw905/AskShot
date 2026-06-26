@@ -15,6 +15,11 @@ public partial class ResultPopup : Window
     public ResultPopup()
     {
         InitializeComponent();
+        QuestionBox.TextChanged += (_, _) =>
+        {
+            PlaceholderText.Visibility = string.IsNullOrEmpty(QuestionBox.Text)
+                ? Visibility.Visible : Visibility.Collapsed;
+        };
     }
 
     public void ShowLoading(Point cursorPos)

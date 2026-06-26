@@ -10,38 +10,55 @@
         ResizeMode="NoResize"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
         KeyDown="Window_KeyDown">
-    <Border Background="#FAFAFA" CornerRadius="8" BorderBrush="#D6D6D6" BorderThickness="1">
+    <Border Background="{DynamicResource BackgroundBrush}"
+            CornerRadius="{DynamicResource RadiusLg}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.22"/>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.16" Color="#000000"/>
         </Border.Effect>
-        <Grid Margin="14">
+        <Grid Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- ── Header ─────────────────────────────────────── -->
             <Grid>
-                <TextBlock Text="解释" Foreground="#222222" FontSize="14"
-                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="解释"
+                           FontFamily="{DynamicResource SerifFont}"
+                           Foreground="{DynamicResource ForegroundBrush}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="复制" Width="54" Height="28" Click="Copy_Click"
-                            ToolTip="复制结果"/>
-                    <Button x:Name="PinButton" Content="固定" Width="54" Height="28"
-                            Margin="8,0,0,0" Click="Pin_Click" ToolTip="固定窗口"/>
-                    <Button Content="关闭" Width="54" Height="28" Margin="8,0,0,0"
-                            Click="Close_Click" ToolTip="关闭"/>
+                    <Button Content="复制" Width="48" Height="30"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="12" MinWidth="0"
+                            Click="Copy_Click" ToolTip="复制结果"/>
+                    <Button x:Name="PinButton" Content="固定" Width="48" Height="30"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="12" MinWidth="0"
+                            Margin="4,0,0,0" Click="Pin_Click" ToolTip="固定窗口"/>
+                    <Button Content="关闭" Width="48" Height="30"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="12" MinWidth="0"
+                            Margin="4,0,0,0" Click="Close_Click" ToolTip="关闭"/>
                 </StackPanel>
             </Grid>
 
+            <!-- ── Body ───────────────────────────────────────── -->
             <Grid Grid.Row="1" Margin="0,12,0,8">
                 <!-- Loading State -->
                 <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center"
                             HorizontalAlignment="Center" Visibility="Collapsed">
                     <Grid Width="36" Height="36" Margin="0,0,0,10">
-                        <Ellipse Width="36" Height="36" Stroke="#E8EAED"
+                        <Ellipse Width="36" Height="36"
+                                 Stroke="{DynamicResource MutedBrush}"
                                  StrokeThickness="3" Fill="Transparent"/>
-                        <Ellipse Width="36" Height="36" Stroke="#4285F4"
+                        <Ellipse Width="36" Height="36"
+                                 Stroke="{DynamicResource BrandBrush}"
                                  StrokeThickness="3" Fill="Transparent"
                                  StrokeDashArray="28,84"
                                  RenderTransformOrigin="0.5,0.5">
@@ -61,27 +78,66 @@
                             </Ellipse.Triggers>
                         </Ellipse>
                     </Grid>
-                    <TextBlock Text="思考中..." Foreground="#5F6368" FontSize="14"
-                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="思考中..."
+                               Foreground="{DynamicResource MutedForegroundBrush}"
+                               FontSize="14" HorizontalAlignment="Center"/>
                 </StackPanel>
                 <!-- Result State -->
-                <TextBox x:Name="ResultText" Foreground="#202124" FontSize="14"
-                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
-                         IsReadOnly="True" Background="Transparent" BorderThickness="0"
-                         Padding="0" Text="" Visibility="Collapsed"/>
+                <TextBox x:Name="ResultText"
+                         Foreground="{DynamicResource ForegroundBrush}"
+                         FontSize="14"
+                         FontFamily="{DynamicResource SansFont}"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         IsReadOnly="True"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="0"
+                         MinHeight="0"
+                         VerticalContentAlignment="Top"
+                         Text=""
+                         Visibility="Collapsed"/>
             </Grid>
-            <Border Grid.Row="2" Background="#F1F3F4" CornerRadius="6">
+
+            <!-- ── Follow-up Bar ─────────────────────────────── -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource PopoverBackgroundBrush}"
+                    CornerRadius="{DynamicResource RadiusSm}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    Padding="4">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="QuestionBox" Foreground="#202124"
-                             Background="Transparent" BorderThickness="0"
-                             Padding="8,6" VerticalAlignment="Center"
-                             KeyDown="QuestionBox_KeyDown"
-                             Text="" ToolTip="继续追问"/>
-                    <Button Grid.Column="1" Content="Ask" Width="48" Height="30"
+
+                    <Grid>
+                        <!-- Placeholder overlay -->
+                        <TextBlock x:Name="PlaceholderText"
+                                   Text="继续追问..."
+                                   Foreground="{DynamicResource MutedForegroundBrush}"
+                                   FontSize="13"
+                                   VerticalAlignment="Center"
+                                   Padding="8,6"
+                                   IsHitTestVisible="False"/>
+                        <TextBox x:Name="QuestionBox"
+                                 Foreground="{DynamicResource ForegroundBrush}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="8,6"
+                                 VerticalAlignment="Center"
+                                 FontSize="13"
+                                 KeyDown="QuestionBox_KeyDown"
+                                 Text="" ToolTip="继续追问"/>
+                    </Grid>
+
+                    <Button Grid.Column="1" Content="Ask"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="48" Height="34"
+                            Margin="4,0,0,0"
+                            FontSize="13" MinWidth="0"
                             Click="AskFollowUp_Click" ToolTip="追问"/>
                 </Grid>
             </Border>
