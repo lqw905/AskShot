@@ -25,9 +25,8 @@ AskShot 解决的就是这个：**框选 → 问**，答案直接在右下角浮
 | **框选截图** | 热键唤起，鼠标拖动框选任意屏幕区域，支持多显示器/高 DPI |
 | **VLM 直连** | 截图以 base64 PNG 直送视觉模型，不做本地 OCR |
 | **多模型兼容** | 兼容 OpenAI 兼容协议（vLLM / Ollama / DeepSeek / Qwen / 其他云端 API） |
-| **悬浮结果窗** | 右下角常驻结果展示，支持滚动和多轮追问 |
-| **历史记录** | 每次分析自动写入 `data/history/*.json`，可按关键词检索 |
-| **常驻托盘** | 系统托盘图标常驻，右键打开控制台 / 重启服务 / 退出 |
+| **悬浮结果窗** | 右下角常驻结果展示，淡入动画，支持滚动和多轮追问 |
+| **常驻托盘** | 系统托盘相机图标常驻，右键打开控制台 / 重启服务 / 退出 |
 | **零数据库** | 历史记录以纯文本 JSON 文件持久化，易于迁移和备份 |
 | **轻量后台** | Python 代理 ~20MB 内存，不加载任何模型 |
 
@@ -198,6 +197,7 @@ bin/publish/AskShot.Client.exe
 AskShot/
 ├── AGENTS.md                         # AI 助手指令（Codex 用）
 ├── CLAUDE.md                         # Claude 配置
+├── AskShot.ico                       # 应用程序图标
 ├── docs/
 │   ├── README.md                     # 详细方案文档索引
 │   ├── architecture.md               # 整体架构设计
@@ -212,22 +212,27 @@ AskShot/
 │   ├── models.py                     # Pydantic 请求/响应模型
 │   └── requirements.txt              # fastapi + uvicorn + httpx
 ├── scripts/
+│   ├── package-windows.ps1           # Windows 打包脚本
+│   ├── package-macos.sh              # macOS 打包脚本
 │   ├── run-macos.sh                  # macOS 开发启动脚本
 │   └── run-windows.ps1               # Windows 开发启动脚本
+├── .github/workflows/
+│   └── release.yml                   # GitHub Actions 自动打包发布
 └── src/AskShot.Client/            # C# WPF 桌面客户端
-    ├── Models/AppConfig.cs           # 配置模型（LLM/Hotkey/General）
+    ├── Models/AppConfig.cs           # 配置模型（LLM/Hotkey/Data）
     ├── Services/
     │   ├── HotkeyService.cs          # 全局热键（RegisterHotKey）
     │   ├── ScreenCaptureService.cs   # GDI 截图 + DPI 坐标映射
     │   ├── PythonServiceManager.cs   # Python 子进程管理
     │   ├── InferenceClient.cs        # HTTP 客户端（单例 + 重试）
-    │   └── TrayIconService.cs        # 系统托盘（WPF Popup 菜单）
-    └── Views/
-        ├── RegionSelector.xaml(.cs)  # 全屏选框（半透明遮罩）
-        ├── ResultPopup.xaml(.cs)     # 右下角悬浮结果窗
-        └── MainWindow.xaml(.cs)      # 控制台（LLM 配置 + 测试）
-    ├── App.xaml(.cs)                 # 应用入口 + 全局异常处理
-    └── AskShot.Client.csproj      # .NET 9 WPF 项目文件
+    │   └── TrayIconService.cs        # 系统托盘（相机图标 + WPF Popup 菜单）
+    ├── Views/
+    │   ├── RegionSelector.xaml(.cs)  # 全屏选框（半透明遮罩）
+    │   ├── ResultPopup.xaml(.cs)     # 右下角悬浮结果窗（淡入动画）
+    │   ├── HistoryWindow.xaml(.cs)   # 历史记录浏览窗口
+    │   └── MainWindow.xaml(.cs)      # 控制台（Claude 设计系统样式）
+    ├── App.xaml(.cs)                 # 应用入口 + 全局异常处理 + 设计系统资源
+    └── AskShot.Client.csproj         # .NET 9 WPF 项目文件
 └── src/AskShot.Mac/               # macOS PySide6 客户端
     ├── askshot_mac.py             # 托盘 / 热键 / 截图框选 / 配置 / 历史搜索
     └── requirements.txt           # macOS 客户端 + 后端依赖
@@ -262,27 +267,27 @@ cd services && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8900
 GitHub Actions 会在推送 `v*` tag 或手动运行 Release workflow 时打包：
 
 ```bash
-git tag v0.0.1
-git push origin v0.0.1
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
 产物：
 
 ```text
-AskShot-0.0.1-macos-x64.zip      # AskShot.app + 内置 Python 代理服务
-AskShot-0.0.1-windows-x64.zip    # WPF portable build + 内置 Python 代理服务
+AskShot-0.1.0-macos-x64.zip      # AskShot.app + 内置 Python 代理服务
+AskShot-0.1.0-windows-x64.zip    # WPF portable build + 内置 Python 代理服务（含应用图标）
 ```
 
 本地打包命令：
 
 ```bash
 # macOS
-VERSION=0.0.1 scripts/package-macos.sh
+VERSION=0.1.0 scripts/package-macos.sh
 ```
 
 ```powershell
 # Windows
-$env:VERSION = "0.0.1"
+$env:VERSION = "0.1.0"
 powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 ```
 
