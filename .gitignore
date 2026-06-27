@@ -35,4 +35,5 @@ data/
 Thumbs.db
 
 # publish output (for distribution)
+publish/
 # (keep src/, services/, docs/, AGENTS.md, CLAUDE.md)
