@@ -36,32 +36,47 @@ public class ScreenCaptureService
         if (bounds.width <= 0 || bounds.height <= 0)
             throw new InvalidOperationException("无法获取屏幕尺寸。");
 
-        // Create a DC covering the entire virtual screen. GetDC(NULL) returns
-        // a DC for the entire screen; the source coordinate for BitBlt must
-        // still be given in virtual-screen physical pixels (which is what
-        // vsLeft/vsTop are).
-        IntPtr screenDC = NativeMethods.GetDC(IntPtr.Zero);
-        IntPtr memDC = NativeMethods.CreateCompatibleDC(screenDC);
-        IntPtr hBitmap = NativeMethods.CreateCompatibleBitmap(screenDC, bounds.width, bounds.height);
-        IntPtr oldBitmap = NativeMethods.SelectObject(memDC, hBitmap);
+        IntPtr screenDC = IntPtr.Zero;
+        IntPtr memDC = IntPtr.Zero;
+        IntPtr hBitmap = IntPtr.Zero;
+        IntPtr oldBitmap = IntPtr.Zero;
 
-        // BitBlt from the virtual screen origin — vsLeft/vsTop may be
-        // negative in multi-monitor setups where secondary monitors sit
-        // above or to the left of the primary one.
-        NativeMethods.BitBlt(memDC, 0, 0, bounds.width, bounds.height,
-            screenDC, bounds.left, bounds.top, NativeMethods.SRCCOPY);
+        try
+        {
+            // Create a DC covering the entire virtual screen. GetDC(NULL) returns
+            // a DC for the entire screen; the source coordinate for BitBlt must
+            // still be given in virtual-screen physical pixels (which is what
+            // vsLeft/vsTop are).
+            screenDC = NativeMethods.GetDC(IntPtr.Zero);
+            memDC = NativeMethods.CreateCompatibleDC(screenDC);
+            hBitmap = NativeMethods.CreateCompatibleBitmap(screenDC, bounds.width, bounds.height);
+            oldBitmap = NativeMethods.SelectObject(memDC, hBitmap);
 
-        var result = Imaging.CreateBitmapSourceFromHBitmap(
-            hBitmap, IntPtr.Zero, Int32Rect.Empty,
-            BitmapSizeOptions.FromEmptyOptions());
-        result.Freeze();
+            // BitBlt from the virtual screen origin — vsLeft/vsTop may be
+            // negative in multi-monitor setups where secondary monitors sit
+            // above or to the left of the primary one.
+            NativeMethods.BitBlt(memDC, 0, 0, bounds.width, bounds.height,
+                screenDC, bounds.left, bounds.top, NativeMethods.SRCCOPY);
 
-        NativeMethods.SelectObject(memDC, oldBitmap);
-        NativeMethods.DeleteObject(hBitmap);
-        NativeMethods.DeleteDC(memDC);
-        NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
+            var result = Imaging.CreateBitmapSourceFromHBitmap(
+                hBitmap, IntPtr.Zero, Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
+            result.Freeze();
 
-        return result;
+            return result;
+        }
+        finally
+        {
+            // 确保所有 GDI 对象都被释放，即使发生异常
+            if (oldBitmap != IntPtr.Zero && memDC != IntPtr.Zero)
+                NativeMethods.SelectObject(memDC, oldBitmap);
+            if (hBitmap != IntPtr.Zero)
+                NativeMethods.DeleteObject(hBitmap);
+            if (memDC != IntPtr.Zero)
+                NativeMethods.DeleteDC(memDC);
+            if (screenDC != IntPtr.Zero)
+                NativeMethods.ReleaseDC(IntPtr.Zero, screenDC);
+        }
     }
 
     /// <summary>Crops a region from an existing bitmap source. Coordinates are in the source image's pixels.</summary>

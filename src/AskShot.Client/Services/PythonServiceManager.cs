@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using AskShot.Client.Models;
 
 namespace AskShot.Client.Services;
 
@@ -16,7 +17,7 @@ public class PythonServiceManager : IDisposable
     private readonly string _dataDir;
     private readonly string _logDir;
     private readonly string? _serviceExe;
-    private const int Port = 8900;
+    private const int Port = AppConfig.ServicePort;
     private const int MaxRestartAttempts = 3;
     private int _restartCount;
     private bool _disposed;
@@ -64,6 +65,11 @@ public class PythonServiceManager : IDisposable
             EnableRaisingEvents = true,
         };
         _process.StartInfo.Environment["ASKSHOT_DATA_DIR"] = _dataDir;
+        _process.StartInfo.Environment["ASKSHOT_PORT"] = Port.ToString();
+        // 从用户配置读取历史保留天数，默认 30 天
+        var config = AppConfig.Load();
+        _process.StartInfo.Environment["ASKSHOT_RETENTION_DAYS"] =
+            config.Data.HistoryRetentionDays.ToString();
 
         _process.Exited += OnProcessExited;
         _process.OutputDataReceived += (_, e) =>

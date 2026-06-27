@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class ApiConfig(BaseModel):
     endpoint: str = "http://localhost:8080/v1"
     api_key: str = ""
-    model: str = "qwen2.5-vl-3b-instruct"
+    model: str = "qwen3-vl-flash"
     temperature: float = 0.7
     max_tokens: int = 2048
 

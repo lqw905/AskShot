@@ -19,6 +19,9 @@ public class AppConfig
     public static string DataDir { get; } = Path.Combine(AppDataDir, "data");
     public static string LogsDir { get; } = Path.Combine(AppDataDir, "logs");
 
+    /// <summary>Python 服务端口。</summary>
+    public const int ServicePort = 8900;
+
     private static readonly string ConfigPath = Path.Combine(AppDataDir, "appsettings.json");
     private static readonly string LegacyConfigPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 

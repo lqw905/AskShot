@@ -7,12 +7,12 @@ using AskShot.Client.Models;
 namespace AskShot.Client.Services;
 
 /// <summary>
-/// HTTP client for calling the Python inference service on localhost:8900.
+/// HTTP client for calling the Python inference service on localhost.
 /// </summary>
 public class InferenceClient : IDisposable
 {
     private readonly HttpClient _http;
-    private const string BaseUrl = "http://127.0.0.1:8900";
+    private static readonly string BaseUrl = $"http://127.0.0.1:{AppConfig.ServicePort}";
 
     public InferenceClient()
     {

@@ -108,7 +108,7 @@ public partial class ResultPopup : Window
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape && !_pinned) Close();
+        if (e.Key == Key.Escape) Close();
     }
 
     private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

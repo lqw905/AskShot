@@ -1,13 +1,14 @@
 """File-based history storage — zero dependencies, just JSON files."""
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 
 class HistoryStore:
-    def __init__(self, data_dir: Path = Path("data")):
+    def __init__(self, data_dir: Path = Path("data"), retention_days: int | None = None):
         self.data_dir = data_dir
         self.history_dir = data_dir / "history"
         self.screenshots_dir = data_dir / "screenshots"
@@ -18,6 +19,38 @@ class HistoryStore:
         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         if not self.favorites_file.exists():
             self.favorites_file.write_text("[]", encoding="utf-8")
+
+        # 启动时清理过期历史记录
+        if retention_days is None:
+            retention_days = int(os.environ.get("ASKSHOT_RETENTION_DAYS", "30"))
+        self._purge_old_records(retention_days)
+
+    def _purge_old_records(self, retention_days: int):
+        """删除超过保留天数的历史记录及关联截图。"""
+        if retention_days <= 0:
+            return
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        for f in self.history_dir.glob("*.json"):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+                ts_str = data.get("timestamp", "")
+                if not ts_str:
+                    continue
+                # 兼容带时区和不带时区的时间戳
+                try:
+                    ts = datetime.fromisoformat(ts_str)
+                except ValueError:
+                    ts = datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%S")
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                if ts < cutoff:
+                    # 删除关联截图
+                    screenshot_path = data.get("screenshot_path")
+                    if screenshot_path and Path(screenshot_path).exists():
+                        Path(screenshot_path).unlink(missing_ok=True)
+                    f.unlink()
+            except (json.JSONDecodeError, OSError, ValueError):
+                continue
 
     def save(
         self,

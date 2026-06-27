@@ -34,8 +34,12 @@ async def lifespan(app: FastAPI):
 
     print("[AskShot] Starting...")
     vlm_proxy = VlmProxy()
-    history_store = HistoryStore(data_dir=Path(os.environ.get("ASKSHOT_DATA_DIR", "data")))
-    print("[AskShot] Ready on :8900")
+    history_store = HistoryStore(
+        data_dir=Path(os.environ.get("ASKSHOT_DATA_DIR", "data")),
+        retention_days=int(os.environ.get("ASKSHOT_RETENTION_DAYS", "30")),
+    )
+    port = int(os.environ.get("ASKSHOT_PORT", "8900"))
+    print(f"[AskShot] Ready on :{port}")
 
     yield
 
@@ -121,4 +125,5 @@ async def get_favorites():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8900)
+    port = int(os.environ.get("ASKSHOT_PORT", "8900"))
+    uvicorn.run(app, host="127.0.0.1", port=port)

@@ -105,7 +105,7 @@
 
                                     <TextBlock Text="模型名称" Margin="0,14,0,4"
                                                FontWeight="SemiBold"/>
-                                    <TextBox x:Name="TxtModel" Text="qwen2.5-vl-3b-instruct"/>
+                                    <TextBox x:Name="TxtModel" Text="qwen3-vl-flash"/>
 
                                     <TextBlock Text="Temperature" Margin="0,14,0,4"
                                                FontWeight="SemiBold"/>
