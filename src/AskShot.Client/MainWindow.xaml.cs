@@ -99,15 +99,12 @@ public partial class MainWindow : Window
 
     private async void TestConnection_Click(object sender, RoutedEventArgs e)
     {
-        LblConnectionStatus.Text = "测试中...";
-        StatusDot.Fill = (Brush)FindResource("MutedForegroundBrush");
         SaveConfigFromUi();
 
         var healthy = await _client.IsHealthy();
         if (!healthy)
         {
-            LblConnectionStatus.Text = "Python 服务未响应";
-            StatusDot.Fill = (Brush)FindResource("ErrorBrush");
+            MessageBox.Show("Python 服务未响应", "连接测试", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -116,18 +113,16 @@ public partial class MainWindow : Window
             var result = await _client.TestLlmConnectionAsync(_config.Llm);
             if (result == null)
             {
-                LblConnectionStatus.Text = "API 测试无响应";
-                StatusDot.Fill = (Brush)FindResource("ErrorBrush");
+                MessageBox.Show("API 测试无响应", "连接测试", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            LblConnectionStatus.Text = result.Message;
-            StatusDot.Fill = (Brush)FindResource(result.Ok ? "SuccessBrush" : "ErrorBrush");
+            MessageBox.Show(result.Message, "连接测试", MessageBoxButton.OK,
+                result.Ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
-            LblConnectionStatus.Text = $"API 测试失败: {ex.Message}";
-            StatusDot.Fill = (Brush)FindResource("ErrorBrush");
+            MessageBox.Show($"API 测试失败: {ex.Message}", "连接测试", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
