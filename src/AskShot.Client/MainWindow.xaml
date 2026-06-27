@@ -91,7 +91,7 @@
                         </TabItem>
 
                         <!-- ── LLM Config Tab ────────────────── -->
-                        <TabItem Header="LLM 配置">
+                        <TabItem Header="VLM 配置">
                             <Border Style="{StaticResource CardBorder}"
                                     Margin="0,12,0,0">
                                 <StackPanel VerticalAlignment="Top">
