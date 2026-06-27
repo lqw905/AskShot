@@ -129,6 +129,10 @@ public partial class App : Application
             var base64 = _captureService.ToBase64Png(captured);
             _lastImageBase64 = base64;
 
+            // 自动复制截图到剪贴板，方便用户直接粘贴
+            try { Clipboard.SetImage(captured); }
+            catch { /* 剪贴板操作非关键，跳过 */ }
+
             GetCursorPos(out var cursorPt);
 
             if (_currentPopup is { IsPinned: false })

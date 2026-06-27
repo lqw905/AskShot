@@ -36,12 +36,15 @@ public partial class MainWindow : Window
         LblTemperature.Text = _config.Llm.Temperature.ToString("F1");
         TxtMaxTokens.Text = _config.Llm.MaxTokens.ToString();
 
-        ChkSaveScreenshots.IsChecked = _config.Data.SaveScreenshots;
+        // 先设置所有输入字段，再设置 checkbox（避免 Checked/Unchecked 事件触发 SaveConfigFromUi
+        // 时读到未初始化的 TextBox 值，导致覆盖已保存的配置）
         TxtScreenshotPath.Text = string.IsNullOrEmpty(_config.Data.ScreenshotPath)
             ? Path.Combine(AppConfig.DataDir, "screenshots")
             : _config.Data.ScreenshotPath;
         TxtScreenshotPath.IsEnabled = _config.Data.SaveScreenshots;
         TxtRetentionDays.Text = _config.Data.HistoryRetentionDays.ToString();
+
+        ChkSaveScreenshots.IsChecked = _config.Data.SaveScreenshots;
     }
 
     private void SaveConfigFromUi()
@@ -191,16 +194,63 @@ public partial class MainWindow : Window
         if (Directory.Exists(historyDir))
         {
             foreach (var f in Directory.GetFiles(historyDir, "*.json"))
+            {
+                // 删除关联的截图文件
+                try
+                {
+                    var json = File.ReadAllText(f);
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("screenshot_path", out var pathProp)
+                        && pathProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        var screenshotPath = pathProp.GetString();
+                        if (!string.IsNullOrEmpty(screenshotPath) && File.Exists(screenshotPath))
+                            File.Delete(screenshotPath);
+                    }
+                }
+                catch { /* 单个记录解析失败不影响继续清理 */ }
+
                 File.Delete(f);
+            }
         }
+
+        // 清理默认截图目录中的所有截图文件
+        var defaultScreenshotDir = Path.Combine(AppConfig.DataDir, "screenshots");
+        if (Directory.Exists(defaultScreenshotDir))
+        {
+            foreach (var f in Directory.GetFiles(defaultScreenshotDir, "*.png"))
+                SafeDelete(f);
+        }
+
+        // 清理用户自定义截图目录中的所有截图文件（与默认目录不同时）
+        if (_config.Data.SaveScreenshots && !string.IsNullOrEmpty(_config.Data.ScreenshotPath))
+        {
+            var customDir = _config.Data.ScreenshotPath;
+            if (Path.GetFullPath(customDir) != Path.GetFullPath(defaultScreenshotDir)
+                && Directory.Exists(customDir))
+            {
+                foreach (var f in Directory.GetFiles(customDir, "*.png"))
+                    SafeDelete(f);
+            }
+        }
+
         ShowToast("已清空所有历史记录");
+    }
+
+    private static void SafeDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch { /* 跳过无法删除的文件 */ }
     }
 
     private void OpenDataDir_Click(object sender, RoutedEventArgs e)
     {
-        var dataDir = AppConfig.DataDir;
-        Directory.CreateDirectory(dataDir);
-        Process.Start(new ProcessStartInfo("explorer.exe", dataDir) { UseShellExecute = true });
+        // 优先打开用户设置的截图保存目录（开启截图保存且设置了路径时）
+        var targetDir = (_config.Data.SaveScreenshots && !string.IsNullOrEmpty(_config.Data.ScreenshotPath))
+            ? _config.Data.ScreenshotPath
+            : AppConfig.DataDir;
+        Directory.CreateDirectory(targetDir);
+        Process.Start(new ProcessStartInfo("explorer.exe", targetDir) { UseShellExecute = true });
     }
 
     private async void RestartService_Click(object sender, RoutedEventArgs e)
