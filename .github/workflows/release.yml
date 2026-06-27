@@ -3,123 +3,39 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Release version without v prefix"
-        required: true
-        default: "0.0.1"
-
-permissions:
-  contents: write
+      - 'v*'
 
 jobs:
-  macos:
-    name: Build macOS package
-    runs-on: macos-latest
-    env:
-      VERSION: ${{ github.event.inputs.version || github.ref_name }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Normalize version
-        shell: bash
-        run: echo "VERSION=${VERSION#v}" >> "$GITHUB_ENV"
-
-      - name: Build macOS artifact
-        shell: bash
-        run: scripts/package-macos.sh
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: askshot-macos
-          path: out/AskShot-*-macos-x64.zip
-
-  windows:
-    name: Build Windows package
+  build-windows:
     runs-on: windows-latest
-    env:
-      VERSION: ${{ github.event.inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: '9.0.x'
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Normalize version
+      - name: Publish self-contained
         shell: pwsh
         run: |
-          $version = "${env:VERSION}".TrimStart("v")
-          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          dotnet publish src/AskShot.Client/AskShot.Client.csproj `
+            -c Release -o publish/AskShot-${{ github.ref_name }} `
+            --self-contained -r win-x64
 
-      - name: Build Windows artifact
+      - name: Copy Python service
         shell: pwsh
-        run: scripts/package-windows.ps1
+        run: |
+          Copy-Item -Recurse services publish/AskShot-${{ github.ref_name }}/services
 
-      - uses: actions/upload-artifact@v4
+      - name: Create zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/AskShot-${{ github.ref_name }} `
+            -DestinationPath publish/AskShot-${{ github.ref_name }}.zip -Force
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: askshot-windows
-          path: out/AskShot-*-windows-x64.zip
-
-  release:
-    name: Publish GitHub Release
-    runs-on: ubuntu-latest
-    needs:
-      - macos
-      - windows
-    env:
-      VERSION: ${{ github.event.inputs.version || github.ref_name }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Normalize version
-        shell: bash
-        run: |
-          VERSION="${VERSION#v}"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "TAG=v$VERSION" >> "$GITHUB_ENV"
-
-      - uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-          merge-multiple: true
-
-      - name: Create release notes
-        shell: bash
-        run: |
-          cat > RELEASE_NOTES.md <<EOF
-          AskShot $VERSION
-
-          First packaged release.
-
-          Artifacts:
-          - AskShot-$VERSION-macos-x64.zip
-          - AskShot-$VERSION-windows-x64.zip
-
-          Notes:
-          - macOS build is ad-hoc signed and not notarized.
-          - Windows build is portable and includes the Python proxy service.
-          EOF
-
-      - name: Publish release
-        shell: bash
-        run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" release-artifacts/* --clobber
-          else
-            gh release create "$TAG" release-artifacts/* \
-              --target "$GITHUB_SHA" \
-              --title "AskShot $VERSION" \
-              --notes-file RELEASE_NOTES.md
-          fi
+          files: publish/AskShot-${{ github.ref_name }}.zip
+          generate_release_notes: true
