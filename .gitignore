@@ -21,6 +21,9 @@ deps/
 data/
 *.log
 
+# Documentation (scratchpad notes, not committed)
+docs/
+
 # Temporary
 .tmp/
 
@@ -36,4 +39,4 @@ Thumbs.db
 
 # publish output (for distribution)
 publish/
-# (keep src/, services/, docs/, AGENTS.md, CLAUDE.md)
+# (keep src/, services/, AGENTS.md, CLAUDE.md)
