@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -19,7 +18,8 @@ public class TrayIconService : IDisposable
     private nint _iconHandle;
     private bool _visible;
     private bool _disposed;
-    private Popup? _currentPopup;
+    private Window? _menuWindow;
+    private bool _menuClosing;
 
     public event Action? DoubleClick;
     public event Action? OpenConsole;
@@ -75,11 +75,9 @@ public class TrayIconService : IDisposable
     {
         try
         {
-            // Close any previous popup
-            _currentPopup?.SetCurrentValue(Popup.IsOpenProperty, false);
+            // Close any previous menu window
+            _menuWindow?.Close();
 
-            // Use a popup that positions itself via screen coordinates.
-            // We'll place it at the mouse cursor.
             GetCursorPos(out var pt);
             double dpiScale = 1.0;
             var hwndSource = PresentationSource.FromVisual(_owner);
@@ -91,36 +89,55 @@ public class TrayIconService : IDisposable
             double screenX = pt.X / dpiScale;
             double screenY = pt.Y / dpiScale;
 
-            var popup = new Popup
-            {
-                Placement = PlacementMode.AbsolutePoint,
-                HorizontalOffset = screenX,
-                VerticalOffset = screenY,
-                StaysOpen = false,
-            };
-
             var panel = new System.Windows.Controls.StackPanel();
-            panel.Children.Add(CreateMenuButton("控制台", () => { popup.IsOpen = false; OpenConsole?.Invoke(); }));
-            panel.Children.Add(CreateMenuButton("搜索历史", () => { popup.IsOpen = false; MessageBox.Show("功能尚未开启", "AskShot"); }));
+            panel.Children.Add(CreateMenuButton("控制台", OpenConsole));
+            panel.Children.Add(CreateMenuButton("搜索历史", () =>
+            {
+                _menuClosing = true;
+                _menuWindow?.Close();
+                _menuWindow = null;
+                _menuClosing = false;
+                // Close 完成后再弹窗，避免 Deactivated 冲突
+                Application.Current.Dispatcher.BeginInvoke(
+                    new Action(() => MessageBox.Show("功能尚未开启", "AskShot")));
+            }));
             panel.Children.Add(new System.Windows.Controls.Border
             {
-                Background = new SolidColorBrush(Color.FromRgb(0xED, 0xE9, 0xDE)), // Claude MutedBrush
+                Background = new SolidColorBrush(Color.FromRgb(0xED, 0xE9, 0xDE)),
                 Height = 1,
                 Margin = new Thickness(4, 2, 4, 2),
             });
-            panel.Children.Add(CreateMenuButton("退出", () => { popup.IsOpen = false; Exit?.Invoke(); }));
+            panel.Children.Add(CreateMenuButton("退出", Exit));
 
-            popup.Child = new System.Windows.Controls.Border
+            _menuWindow = new Window
             {
-                Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xF5)), // Claude BackgroundBrush
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0xDA, 0xD9, 0xD4)), // Claude BorderBrush
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(4),
-                Child = panel,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = Brushes.Transparent,
+                ShowInTaskbar = false,
+                Topmost = true,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = screenX,
+                Top = screenY,
+                Content = new System.Windows.Controls.Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xF5)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(0xDA, 0xD9, 0xD4)),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(4),
+                    Child = panel,
+                },
             };
 
-            _currentPopup = popup;
-            popup.IsOpen = true;
+            // 窗口失去激活状态时自动关闭（点击外部、弹出 MessageBox、打开其他窗口等）
+            _menuWindow.Deactivated += (_, _) =>
+            {
+                if (!_menuClosing && _menuWindow?.IsVisible == true)
+                    _menuWindow.Close();
+            };
+            _menuWindow.Show();
         }
         catch (Exception ex)
         {
