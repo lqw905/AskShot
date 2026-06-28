@@ -124,20 +124,29 @@ public class PythonServiceManager : IDisposable
     {
         if (_disposed) return;
 
-        _restartCount++;
-        Console.WriteLine($"[AskShot] Python process exited (attempt {_restartCount}/{MaxRestartAttempts})");
+        try
+        {
+            _restartCount++;
+            Console.WriteLine($"[AskShot] Python process exited (attempt {_restartCount}/{MaxRestartAttempts})");
 
-        if (_restartCount <= MaxRestartAttempts)
-        {
-            // Exponential backoff: 2s, 4s, 8s
-            var delay = TimeSpan.FromSeconds(Math.Pow(2, _restartCount));
-            Console.WriteLine($"[AskShot] Restarting in {delay.TotalSeconds}s...");
-            await Task.Delay(delay);
-            await StartAsync();
+            if (_restartCount <= MaxRestartAttempts)
+            {
+                // Exponential backoff: 2s, 4s, 8s
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, _restartCount));
+                Console.WriteLine($"[AskShot] Restarting in {delay.TotalSeconds}s...");
+                await Task.Delay(delay);
+                await StartAsync();
+            }
+            else
+            {
+                Console.WriteLine("[AskShot] Max restart attempts reached. Service stopped.");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("[AskShot] Max restart attempts reached. Service stopped.");
+            WriteServiceLog("python-service.err.log",
+                $"[FATAL] OnProcessExited crash: {ex}");
+            Console.WriteLine($"[AskShot] Python restart failed: {ex.Message}");
         }
     }
 

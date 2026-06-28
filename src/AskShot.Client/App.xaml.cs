@@ -152,7 +152,7 @@ public partial class App : Application
 
             if (_currentPopup is { IsPinned: false })
                 _currentPopup.Close();
-            _currentPopup = new ResultPopup();
+            _currentPopup = new ResultPopup { ImageBase64 = base64 };
             _currentPopup.FollowUpAsked += OnFollowUp;
             _currentPopup.ShowLoading(new Point(cursorPt.X, cursorPt.Y));
 
@@ -166,7 +166,7 @@ public partial class App : Application
                     string? screenshotPath = null;
                     if (_config.Data.SaveScreenshots)
                         screenshotPath = await SaveScreenshot(captured, hash);
-                    _ = _inferenceClient.SaveHistoryAsync(
+                    await _inferenceClient.SaveHistoryAsync(
                         result.Summary,
                         screenshotPath: screenshotPath,
                         imageHash: hash);
@@ -192,12 +192,14 @@ public partial class App : Application
     private async void OnFollowUp(object? sender, string question)
     {
         if (_currentPopup == null) return;
+        var imageBase64 = _currentPopup.ImageBase64;
+        if (imageBase64 == null) return;
         if (_inferenceClient != null && await _inferenceClient.IsHealthy())
         {
             var latestConfig = AppConfig.Load();
             _currentPopup.ShowLoadingForQuestion(question);
             var result = await _inferenceClient.AnalyzeAsync(
-                _lastImageBase64,
+                imageBase64,
                 userQuestion: question,
                 previousAnswer: _currentPopup.CurrentAnswer,
                 llmConfig: latestConfig.Llm);

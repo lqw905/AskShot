@@ -15,6 +15,9 @@ public partial class ResultPopup : Window
 
     public string CurrentAnswer { get; private set; } = "";
 
+    /// <summary>Popup 持有的截图 base64，追问题时使用，不受全局字段覆盖影响。</summary>
+    public string? ImageBase64 { get; set; }
+
     public ResultPopup()
     {
         InitializeComponent();

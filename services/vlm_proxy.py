@@ -98,7 +98,6 @@ class VlmProxy:
                 {
                     "role": "user",
                     "content": [
-                        image_item,
                         {"type": "text", "text": user_question or "继续提问"},
                     ],
                 },

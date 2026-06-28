@@ -62,7 +62,7 @@ class HistoryStore:
         tags: Optional[list[str]] = None,
     ) -> str:
         """Save an analysis record. Returns the record ID."""
-        ts = datetime.utcnow()
+        ts = datetime.now(timezone.utc)
         hash_part = image_hash[:8] if image_hash else "00000000"
         record_id = f"{ts.strftime('%Y-%m-%d_%H%M%S')}_{hash_part}"
 
@@ -85,8 +85,8 @@ class HistoryStore:
         return record_id
 
     def get_recent(self, limit: int = 10, hours: int = 24) -> list[dict]:
-        """Get the most recent records within the time window."""
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        """Get the most recent records within the time window. hours=0 means no time limit."""
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours) if hours > 0 else None
         results = []
 
         files = sorted(
@@ -98,9 +98,10 @@ class HistoryStore:
         for f in files:
             if len(results) >= limit:
                 break
-            mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc)
-            if mtime < cutoff:
-                continue
+            if cutoff is not None:
+                mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc)
+                if mtime < cutoff:
+                    continue
             try:
                 results.append(json.loads(f.read_text(encoding="utf-8")))
             except (json.JSONDecodeError, OSError):

@@ -239,8 +239,8 @@ public class TrayIconService : IDisposable
         var hbmColor = CreateCompatibleBitmap(screenDC, 32, 32);
         SetBitmapBits(hbmColor, (uint)pixels.Length, pixels);
 
-        var maskBits = new byte[stride / 4 * 32];
-        Array.Fill<byte>(maskBits, 255);
+        var maskBits = new byte[128]; // 32px 宽 1bpp = 4 bytes/row × 32 rows
+        Array.Fill<byte>(maskBits, 0);     // 全 0 = 全透明掩码；32bpp alpha 通道自行处理透明
         var hbmMask = CreateBitmap(32, 32, 1, 1, maskBits);
 
         var iconInfo = new ICONINFO

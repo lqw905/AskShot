@@ -34,15 +34,28 @@ public class AppConfig
         var path = File.Exists(ConfigPath) ? ConfigPath : LegacyConfigPath;
         if (File.Exists(path))
         {
-            var json = File.ReadAllText(path);
-            var config = JsonSerializer.Deserialize<AppConfig>(
-                json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new AppConfig();
+            try
+            {
+                var json = File.ReadAllText(path);
+                var config = JsonSerializer.Deserialize<AppConfig>(
+                    json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new AppConfig();
 
-            ApplyLegacyLlmFields(config, json);
-            if (path == LegacyConfigPath)
-                config.Save();
-            return config;
+                ApplyLegacyLlmFields(config, json);
+                if (path == LegacyConfigPath)
+                    config.Save();
+                return config;
+            }
+            catch (Exception ex)
+            {
+                // 配置文件损坏：备份坏文件，返回默认配置
+                var backupPath = path + ".corrupted";
+                try { File.Copy(path, backupPath, overwrite: true); } catch { }
+                try { File.Delete(path); } catch { }
+                System.Diagnostics.Trace.WriteLine(
+                    $"[AskShot] 配置文件损坏，已备份至 {backupPath}: {ex.Message}");
+                return new AppConfig();
+            }
         }
         return new AppConfig();
     }

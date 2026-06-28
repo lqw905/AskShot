@@ -38,7 +38,7 @@ public partial class HistoryWindow : Window
         try
         {
             StatusText.Text = "加载中...";
-            var records = await _client.GetRecentAsync(limit: 50, hours: 24 * 365 * 10);
+            var records = await _client.GetRecentAsync(limit: 50, hours: 0);
             SetRecords(records ?? []);
             StatusText.Text = $"共 {_records.Count} 条记录";
         }
@@ -55,7 +55,7 @@ public partial class HistoryWindow : Window
             var query = SearchBox.Text.Trim();
             StatusText.Text = "搜索中...";
             var records = string.IsNullOrEmpty(query)
-                ? await _client.GetRecentAsync(limit: 50, hours: 24 * 365 * 10)
+                ? await _client.GetRecentAsync(limit: 50, hours: 0)
                 : await _client.SearchHistoryAsync(query, limit: 50);
             SetRecords(records ?? []);
             StatusText.Text = $"共 {_records.Count} 条记录";
@@ -96,10 +96,39 @@ public partial class HistoryWindow : Window
         if (HistoryList.SelectedItem is not ListBoxItem { Tag: HistoryEntry record })
             return;
 
-        DetailsBox.Text = JsonSerializer.Serialize(record, new JsonSerializerOptions
+        var sb = new System.Text.StringBuilder();
+        if (!string.IsNullOrEmpty(record.Timestamp))
         {
-            WriteIndented = true,
-        });
+            sb.AppendLine($"时间：{record.Timestamp.Replace("T", " ")}");
+        }
+        else if (!string.IsNullOrEmpty(record.Id))
+        {
+            // 从 ID 中解析时间 (格式: YYYY-MM-DD_HHmmss_hash)
+            var timePart = record.Id.Length >= 19 ? record.Id[..19] : record.Id;
+            sb.AppendLine($"ID：{timePart}");
+        }
+
+        if (!string.IsNullOrEmpty(record.UserQuestion))
+            sb.AppendLine($"问题：{record.UserQuestion}");
+
+        sb.AppendLine();
+        if (!string.IsNullOrEmpty(record.Analysis))
+        {
+            sb.AppendLine(record.Analysis);
+        }
+        else if (!string.IsNullOrEmpty(record.OcrText))
+        {
+            sb.AppendLine(record.OcrText);
+        }
+        else
+        {
+            sb.AppendLine("(无内容)");
+        }
+
+        if (!string.IsNullOrEmpty(record.ScreenshotPath))
+            sb.AppendLine($"\n截图：{record.ScreenshotPath}");
+
+        DetailsBox.Text = sb.ToString();
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e) => await SearchAsync();
