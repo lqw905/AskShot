@@ -130,8 +130,23 @@ public partial class App : Application
             _lastImageBase64 = base64;
 
             // 自动复制截图到剪贴板，方便用户直接粘贴
-            try { Clipboard.SetImage(captured); }
-            catch { /* 剪贴板操作非关键，跳过 */ }
+            try
+            {
+                WriteLog($"[Clipboard] === 开始复制截图到剪贴板 === captured={captured.PixelWidth}x{captured.PixelHeight} frozen={captured.IsFrozen}");
+
+                // WPF BitmapSource → PNG 字节 → System.Drawing.Bitmap →
+                // 以 CF_DIB 格式写入原生剪贴板（QQ/微信只认 CF_DIB）
+                var pngEncoder = new PngBitmapEncoder();
+                pngEncoder.Frames.Add(BitmapFrame.Create(captured));
+                using var ms = new MemoryStream();
+                pngEncoder.Save(ms);
+                WriteLog($"[Clipboard] PNG 编码完成, 字节数={ms.Length}");
+                ms.Seek(0, SeekOrigin.Begin);
+                using var gdiBitmap = new System.Drawing.Bitmap(ms);
+                WriteLog($"[Clipboard] System.Drawing.Bitmap 构造成功, 尺寸={gdiBitmap.Width}x{gdiBitmap.Height}, 格式={gdiBitmap.PixelFormat}");
+                CopyBitmapToClipboardDib(gdiBitmap);
+            }
+            catch (Exception ex) { WriteLog($"[Clipboard] 剪贴板复制失败: {ex}"); }
 
             GetCursorPos(out var cursorPt);
 
@@ -400,4 +415,189 @@ public partial class App : Application
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int X; public int Y; }
+
+    // Win32 原生剪贴板 API
+    private const uint CF_DIB = 8;
+    private const uint CF_BITMAP = 2;
+
+    [DllImport("user32.dll")]
+    private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+    [DllImport("user32.dll")]
+    private static extern bool EmptyClipboard();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+    [DllImport("user32.dll")]
+    private static extern bool CloseClipboard();
+
+    [DllImport("user32.dll", CharSet = CharSet.Ansi)]
+    private static extern uint RegisterClipboardFormatA(string lpszFormat);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalAlloc(uint uFlags, IntPtr dwBytes);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalLock(IntPtr hMem);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GlobalUnlock(IntPtr hMem);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalFree(IntPtr hMem);
+
+    /// <summary>
+    /// 将 System.Drawing.Bitmap 以 CF_DIB 格式写入原生剪贴板。
+    /// QQ/微信等 Win32 应用只能识别 CF_DIB，不认识 WPF 的剪贴板序列化方式。
+    /// </summary>
+    private static void CopyBitmapToClipboardDib(System.Drawing.Bitmap bitmap)
+    {
+        WriteLog($"[Clipboard] CopyBitmapToClipboardDib 开始, 尺寸={bitmap.Width}x{bitmap.Height}, 像素格式={bitmap.PixelFormat}");
+
+        // 统一转为 32bpp ARGB 确保 DIB 格式一致
+        using var bmp32 = new System.Drawing.Bitmap(
+            bitmap.Width, bitmap.Height,
+            System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using (var g = System.Drawing.Graphics.FromImage(bmp32))
+            g.DrawImage(bitmap, 0, 0, bitmap.Width, bitmap.Height);
+
+        var rect = new System.Drawing.Rectangle(0, 0, bmp32.Width, bmp32.Height);
+        var bmpData = bmp32.LockBits(rect,
+            System.Drawing.Imaging.ImageLockMode.ReadOnly,
+            bmp32.PixelFormat);
+
+        try
+        {
+            int stride = bmpData.Stride;
+            int pixelDataSize = stride * bmp32.Height;
+            int dibSize = 40 + pixelDataSize;
+            WriteLog($"[Clipboard] DIB 参数: stride={stride}, pixelDataSize={pixelDataSize}, dibSize={dibSize}");
+            byte[] dib = new byte[dibSize];
+
+            // 写入 BITMAPINFOHEADER（40 字节）
+            using (var bw = new BinaryWriter(new MemoryStream(dib, 0, 40, true)))
+            {
+                bw.Write(40);                // biSize
+                bw.Write(bmp32.Width);       // biWidth
+                bw.Write(-bmp32.Height);     // biHeight（负数 = top-down，与 LockBits 数据方向一致）
+                bw.Write((short)1);          // biPlanes
+                bw.Write((short)32);         // biBitCount
+                bw.Write(0);                 // biCompression = BI_RGB
+                bw.Write(pixelDataSize);     // biSizeImage
+                bw.Write(0);                 // biXPelsPerMeter
+                bw.Write(0);                 // biYPelsPerMeter
+                bw.Write(0);                 // biClrUsed
+                bw.Write(0);                 // biClrImportant
+            }
+
+            // 拷贝像素数据
+            Marshal.Copy(bmpData.Scan0, dib, 40, pixelDataSize);
+            WriteLog($"[Clipboard] DIB 字节构造完成, 前16字节={BitConverter.ToString(dib, 0, 16)}");
+
+            // ⚠️ 关键修复：Win32 剪贴板要求 GlobalAlloc(GMEM_MOVEABLE)，
+            // 而 Marshal.AllocHGlobal 使用的是 LocalAlloc，SetClipboardData 会失败！
+            IntPtr hMem = GlobalAlloc(0x0042, (IntPtr)dibSize); // GMEM_MOVEABLE | GMEM_ZEROINIT
+            if (hMem == IntPtr.Zero)
+            {
+                int err = Marshal.GetLastWin32Error();
+                WriteLog($"[Clipboard] ❌ GlobalAlloc 失败! GetLastError={err} (0x{err:X8})");
+                return;
+            }
+            WriteLog($"[Clipboard] GlobalAlloc 成功, hMem=0x{hMem.ToInt64():X16}");
+
+            try
+            {
+                IntPtr pMem = GlobalLock(hMem);
+                if (pMem == IntPtr.Zero)
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    WriteLog($"[Clipboard] ❌ GlobalLock 失败! GetLastError={err} (0x{err:X8})");
+                    return;
+                }
+                Marshal.Copy(dib, 0, pMem, dibSize);
+                GlobalUnlock(hMem);
+                WriteLog($"[Clipboard] 像素数据已写入全局内存");
+
+                if (OpenClipboard(IntPtr.Zero))
+                {
+                    WriteLog($"[Clipboard] 剪贴板已打开");
+                    EmptyClipboard();
+
+                    // 1) CF_DIB — 微信/QQ 需要
+                    IntPtr hResult = SetClipboardData(CF_DIB, hMem);
+                    if (hResult == IntPtr.Zero)
+                    {
+                        int err = Marshal.GetLastWin32Error();
+                        WriteLog($"[Clipboard] ❌ SetClipboardData(CF_DIB) 失败! GetLastError={err} (0x{err:X8})");
+                    }
+                    else
+                    {
+                        WriteLog($"[Clipboard] ✅ SetClipboardData(CF_DIB) 成功");
+                        hMem = IntPtr.Zero; // 所有权已移交剪贴板
+                    }
+
+                    // 2) CF_BITMAP — Electron/Web 应用（AI对话框）需要
+                    IntPtr hBmp = bmp32.GetHbitmap();
+                    IntPtr hBmpResult = SetClipboardData(CF_BITMAP, hBmp);
+                    if (hBmpResult == IntPtr.Zero)
+                    {
+                        int err = Marshal.GetLastWin32Error();
+                        WriteLog($"[Clipboard] ❌ SetClipboardData(CF_BITMAP) 失败! GetLastError={err} (0x{err:X8})");
+                        NativeMethods.DeleteObject(hBmp);
+                    }
+                    else
+                    {
+                        WriteLog($"[Clipboard] ✅ SetClipboardData(CF_BITMAP) 成功, hBmp=0x{hBmp.ToInt64():X16}");
+                    }
+
+                    // 3) PNG — 现代 Web API (navigator.clipboard.read) 需要
+                    using var pngMs = new MemoryStream();
+                    bmp32.Save(pngMs, System.Drawing.Imaging.ImageFormat.Png);
+                    byte[] pngBytes = pngMs.ToArray();
+                    uint cfPng = RegisterClipboardFormatA("PNG");
+                    IntPtr hPng = GlobalAlloc(0x0042, (IntPtr)pngBytes.Length);
+                    if (hPng != IntPtr.Zero)
+                    {
+                        IntPtr pPng = GlobalLock(hPng);
+                        Marshal.Copy(pngBytes, 0, pPng, pngBytes.Length);
+                        GlobalUnlock(hPng);
+                        IntPtr hPngResult = SetClipboardData(cfPng, hPng);
+                        if (hPngResult == IntPtr.Zero)
+                        {
+                            int err = Marshal.GetLastWin32Error();
+                            WriteLog($"[Clipboard] ❌ SetClipboardData(PNG) 失败! GetLastError={err} (0x{err:X8})");
+                            GlobalFree(hPng);
+                        }
+                        else
+                        {
+                            WriteLog($"[Clipboard] ✅ SetClipboardData(PNG) 成功");
+                        }
+                    }
+                    else
+                    {
+                        int err = Marshal.GetLastWin32Error();
+                        WriteLog($"[Clipboard] ❌ GlobalAlloc(PNG) 失败! GetLastError={err} (0x{err:X8})");
+                    }
+
+                    CloseClipboard();
+                }
+                else
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    WriteLog($"[Clipboard] ❌ OpenClipboard 失败! GetLastError={err} (0x{err:X8})");
+                }
+            }
+            finally
+            {
+                if (hMem != IntPtr.Zero)
+                    GlobalFree(hMem);
+            }
+        }
+        finally
+        {
+            bmp32.UnlockBits(bmpData);
+        }
+        WriteLog($"[Clipboard] CopyBitmapToClipboardDib 结束");
+    }
 }
