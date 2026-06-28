@@ -62,14 +62,34 @@ jobs:
           $version = "${env:VERSION}".TrimStart("v")
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Build Windows artifact
+      - name: Build Windows app artifact
         shell: pwsh
         run: scripts/package-windows.ps1
 
       - uses: actions/upload-artifact@v4
         with:
-          name: askshot-windows
+          name: askshot-windows-portable
           path: out/AskShot-*-windows-x64.zip
+
+      - name: Build Windows NSIS installer
+        shell: pwsh
+        run: |
+          $nsisDir = "C:\Program Files (x86)\NSIS"
+          if (-not (Test-Path $nsisDir)) {
+            Write-Host "NSIS not found, installing via winget..."
+            winget install NSIS.NSIS --accept-package-agreements --accept-source-agreements
+            # winget 安装后路径可能不同
+            $nsisDir = Get-ChildItem "C:\Program Files*\NSIS\makensis.exe" -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty DirectoryName
+            if (!$nsisDir) { throw "无法找到 NSIS 安装路径" }
+          }
+          $env:PATH = "$nsisDir;$env:PATH"
+          installer\build-installer.ps1 -SkipPackage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: askshot-windows-installer
+          path: out/AskShot-*-windows-x64-installer.exe
 
   release:
     name: Publish GitHub Release
@@ -102,12 +122,14 @@ jobs:
           AskShot $VERSION
 
           Artifacts:
-          - AskShot-$VERSION-macos-x64.zip
-          - AskShot-$VERSION-windows-x64.zip
+          - AskShot-$VERSION-macos-x64.zip — macOS portable
+          - AskShot-$VERSION-windows-x64.zip — Windows portable (免安装)
+          - AskShot-$VERSION-windows-x64-installer.exe — Windows 安装程序 (NSIS)
 
           Notes:
           - macOS build is ad-hoc signed and not notarized.
           - Windows build is portable and includes the Python proxy service.
+          - Windows installer requires administrator privileges.
           EOF
 
       - name: Publish release
